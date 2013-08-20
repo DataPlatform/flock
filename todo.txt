@@ -1,4 +1,5 @@
  - Create schema for implementing unit tests
  - Create installer
  - Optimize slow routines like schema discovery and the deletes involved in hot_insert
+ - Better and more examples
 
