@@ -41,7 +41,9 @@ for schema_file_path in all_schema_files:
 
 
 	mod = import_from_path(schema_file_path)
+	print schema_file_path
 
+	# schema_class = getattr(mod,'Schema')
 	schema_class = getattr(mod,'Schema')
 
 	#Can't have two schemas with the same name
@@ -75,8 +77,10 @@ for schema_file_path in all_schema_files:
 					parents=[optional_tables_parser]
 				)
 
+print all_schemas
 args = parser.parse_args()
 the_schema_path,the_schema_class = all_schemas[args.schema]
+print the_schema_path,the_schema_class
 args.schema = the_schema_path#legacy
 with get_schema(args,schema_class=the_schema_class) as schema:
 	getattr(schema,args.command)()

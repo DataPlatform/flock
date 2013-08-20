@@ -2,4 +2,7 @@
  - Create installer
  - Optimize slow routines like schema discovery and the deletes involved in hot_insert
  - Better and more examples
+ - Cookiecutter schema template
+ - More types discovered. Also discover constraints.
+ - exec()
 

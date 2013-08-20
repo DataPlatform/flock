@@ -19,7 +19,6 @@ class Schema(FlockSchema):
     """
     #Required (Importing here leaves a reference to the module as an attribute)
     import settings
-
     @operation
     def download_new_data(self,procurements):
 

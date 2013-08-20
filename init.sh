@@ -19,5 +19,5 @@ fi
 pip install -r requirements.txt
 
 #Populate crontab
-cat schemas/*/crontab >> ./crontab
+cat schemas/*/crontab >> ~/crontab
 crontab ./crontab

@@ -1,1 +1,7 @@
 MAILTO="$FLOCK_EMAIL"
+#this is just an example
+0 15 * * * . /home/someuser/.flockrc && cd $FLOCK_ROOT && python flock.py update15 00 * * *	. /home/flock/.bash_profile || /bin/true && . /home/flock/py/flock/bin/activate && cd /home/flock/app/ && python flock.py -d $RN_PROD_DB rightnow nightly_update
+
+#this is just an example
+0 15 * * * . /home/someuser/.flockrc && cd $FLOCK_ROOT && python flock.py update15 00 * * *	. /home/flock/.bash_profile || /bin/true && . /home/flock/py/flock/bin/activate && cd /home/flock/app/ && python flock.py -d $RN_PROD_DB rightnow nightly_update
+
