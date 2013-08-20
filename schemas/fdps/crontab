@@ -1,0 +1,2 @@
+#this is just an example
+0 15 * * * . /home/someuser/.flockrc && cd $FLOCK_ROOT && python flock.py update

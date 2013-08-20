@@ -1,0 +1,5 @@
+#Any variables set here that needs to be used should be unpacked in settings.py
+
+export FPDS_DEV_DB_URI=postgres://$USER:@localhost/fdps_dev
+export FPDS_TEST_DB_URI=postgres://$USER:@localhost/fdps_test
+export FPDS_PROD_DB_URI=postgres://$USER:@localhost/fdps_prod

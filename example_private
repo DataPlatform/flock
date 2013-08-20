@@ -1,0 +1,11 @@
+#Rename to private and change these values to suit your environment.
+
+export FLOCK_ROOT=`pwd`
+export FLOCK_VIRTUALENV_DIR=$FLOCK_ROOT/.py
+export FLOCK_DATA_DIR=$FLOCK_ROOT/data
+export FLOCK_LOG_DIR=$FLOCK_ROOT/log
+export FLOCK_EMAIL=`git config --get user.email`
+export FLOCK_TEST_DB_URI=postgres://$USER:@localhost/flock_test
+export FLOCK_SMTP_SERVER=localhost
+
+

@@ -1,0 +1,1 @@
+- fix bootstrap so it does not need clean "psycopg2.ProgrammingError: relation "procurements" already exists"
