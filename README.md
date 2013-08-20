@@ -30,7 +30,7 @@ There is an example in schemas/fdpc. To build it:
 ```sh 
 cp schemas/fdpc/example_private schemas/fdpc/private # Take a moment to peek at / modify this file and make sure the referenced databases exist
 . init.sh #Init compiles and sources your private settings
-python flock.py fdpc bootstrap
+python flock.py fdps bootstrap
 ```
 
 
