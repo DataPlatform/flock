@@ -114,7 +114,7 @@ class FlockTable(object):
             raise FlockNoData("Refusing to build ddl with empty slices")
 
         infiles = (open(f,'rb') for f in slices)
-        ddl,fieldmap = csv_to_ddl(infiles,self.full_name)
+        ddl,fieldmap = csv_to_ddl(infiles,self.full_name,logger=self.logger,encoding='utf-8')
         self.set_ddl(ddl,fieldmap=fieldmap)
 
     def mapper(self):
@@ -160,7 +160,7 @@ class FlockTable(object):
     def read_slice_from_file(self,slice_name):
         "Reads data from a named csv file"
         filename = os.path.join(self.data_root,'slice',slice_name)
-        reader = FancyReader(filename)
+        reader = FancyReader(filename,encoding='utf-8')
         return list(reader)
 
     @operation
@@ -173,8 +173,7 @@ class FlockTable(object):
             self.logger.debug('New slice is about to be applied {0}'.format(n))
         self.hot_insert_file_data(new_slices,transaction)
         for f in new_slices:
-            self.set_metadata('inserted_slice','f')
-
+            self.set_metadata('inserted_slice',os.path.basename(f))
 
     def get_slice_filenames(self):
         "Globs a list of availible files for the given function."

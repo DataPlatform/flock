@@ -19,29 +19,33 @@ except ImportError:
 
 
 
-def csv_to_ddl(infiles,table_name,map_fields=True):
+def csv_to_ddl(infiles,table_name,map_fields=True,logger=None,encoding=None):
 
-    #init on first reader
-    infile = infiles.next()
-    reader = fancycsv.FancyDictReader(infile,no_tabs=True)
+    def log(v):
+        if logger:
+            logger.debug(v)
 
-    if len(set(reader.fieldnames)) != len(reader.fieldnames):
-        raise Exception('Column names not unique. Use csv_prepare.py')
-    if map_fields:
-        mapped_fields = [fancystring.slugify(h) for h in reader.fieldnames]
-        fieldmap = OrderedDict(zip(reader.fieldnames,mapped_fields))
+    fieldmap = OrderedDict()
     tracker = defaultdict(TypeInferer)
+    rows = 0
 
-    #Now do all the observing
-    while True:
+    for infile in infiles:
+
+        reader = fancycsv.FancyDictReader(infile,no_tabs=True,encoding=encoding)
+
+        if len(set(reader.fieldnames)) != len(reader.fieldnames):
+            raise Exception('Column names not unique. Use csv_prepare.py')
+        if map_fields:
+            mapped_fields = [fancystring.slugify(h) for h in reader.fieldnames]
+            fieldmap.update(OrderedDict(zip(reader.fieldnames,mapped_fields)))
+
+        #Now do all the observing
+        log("Observing {0} for type info".format(infile.name))
+        log("Input encoding is {0}, should be {1}".format(reader.reader.f.encoding,encoding))
         for row in reader:
+            rows += 1
             for k,v in row.iteritems():
                 tracker[k].observe(v)
-        try:
-            infile = infiles.next()
-            reader = fancycsv.FancyDictReader(infile,no_tabs=True)
-        except StopIteration:
-            break
 
     #Data collected now make some psql
     fields_as_sql = ''
@@ -50,10 +54,18 @@ def csv_to_ddl(infiles,table_name,map_fields=True):
 
     #Dump info in original order
     for column_name in reader.fieldnames:
+        log("Tracker is exporting column {0},{1},{2}".format(column_name,tracker[column_name].count,rows))
+
+        if tracker[column_name].count != rows:
+            log("Column was not found in all files!")
+
         inferer = tracker[column_name]
+
         if map_fields:
             column_name = fieldmap[column_name]
+
         fields_as_sql +='\t{0} {1}, \n'.format(column_name,inferer.export())
+        
     fields_as_sql = fields_as_sql.strip().strip(',')
 
     template = '''create table {table_name} ( 
@@ -90,7 +102,7 @@ if __name__ == '__main__':
         outfile = sys.stdout
     #Need schema import to remit found metadata, there is probably a better way to structure this
     with eyeoh.multifileinput(args) as infiles:
-        ddl = csv_to_ddl(infile,args.table_name,map_fields=False)
+        ddl = csv_to_ddl(infiles,args.table_name,map_fields=False)
         outfile.write(ddl)
     
 

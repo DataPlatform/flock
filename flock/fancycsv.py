@@ -45,12 +45,15 @@ class FancyReader:
 
     def __init__(self, f, dialect=None, encoding=None, no_tabs =False, **kwds):
         filename = f.name
-        f = UTF8Recoder(f,encoding=encoding)
+        self.f = UTF8Recoder(f,encoding=encoding)
         if not dialect:
-            dialect = csv.Sniffer().sniff(open(filename,'rb').read(1024))
+            try:
+                dialect = csv.Sniffer().sniff(open(filename,'rb').readline())
+            except:
+                dialect = csv.excel
         else:
             dialect = csv.excel
-        self.reader = csv.reader(f, dialect=dialect, **kwds)
+        self.reader = csv.reader(self.f, dialect=dialect, **kwds)
         self.dialect = dialect
         self.no_tabs = no_tabs
         self.header = None
@@ -92,7 +95,10 @@ class FancyDictReader:
 
     def next(self):
         row = self.reader.next()
-        return dict(zip(self.fieldnames,row))
+        #zip and itertools.izip_longest both don't have correct response to uneven list sizes
+        lr = len(row)
+        row_zipped = ((k,row[i] if i < lr else '') for i,k in enumerate(self.fieldnames))
+        return dict(row_zipped)
 
     def __iter__(self):
         return self
@@ -110,6 +116,7 @@ class UnicodeWriter:
         self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
         self.stream = f
         self.encoder = codecs.getincrementalencoder(encoding)()
+        self.inputencoding = None
 
     def writerow(self, row):
         self.writer.writerow([s.encode("utf-8") for s in row])
