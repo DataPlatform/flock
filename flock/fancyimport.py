@@ -9,5 +9,6 @@ def import_from_path(fullpath):
     sys.path.insert(0,script_dir)
     (file, pathname, description) = imp.find_module(script)
     module = imp.load_module(script, file, pathname, description)
+    file.close()
     del sys.path[0]
     return module

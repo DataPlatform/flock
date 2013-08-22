@@ -6,7 +6,7 @@
 import sys,argparse,os,csv,json
 from flock import db
 from flock.parsers import *
-from flock import output,fancycsv,fancystring,schema,eyeoh
+from flock import output,fancycsv,fancystring,eyeoh
 from flock.ddl import TypeInferer
 
 from collections import defaultdict

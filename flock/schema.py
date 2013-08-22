@@ -10,10 +10,12 @@ from .db import dial,CustomJson
 from .annotate import operation,command,test
 from .log import get_logger
 from .fancycsv import FancyReader,UnicodeWriter
+from .error import *
 try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
+from bin.csv_to_ddl import csv_to_ddl
 
 class FlockTable(object):
 
@@ -52,6 +54,7 @@ class FlockTable(object):
             os.makedirs(directory)
         return filename
 
+    @operation
     def get_ddl(self,temporary=False):
         "Returns the stored DDL from a file"
         ddl = open(self.ddl_filename).read()
@@ -65,6 +68,7 @@ class FlockTable(object):
             ddl += self.get_constraints()
             return ddl
 
+    @operation
     def set_ddl(self,ddl,fieldmap=None):
         "Stores the provided DDL in definitions/{self.name}.sql"
         open(self.ddl_filename,'wb').write(ddl)
@@ -73,6 +77,7 @@ class FlockTable(object):
         self.schema.set_metadata(key,fieldmap)
         self.logger.debug('Updated metadata at key {0}'.format(key))
 
+    @operation
     def get_constraints(self):
         "Looks for any table constraints in constraints/{self.name}.sql"
         filename = self.get_schema_filename('constraint')
@@ -82,6 +87,7 @@ class FlockTable(object):
             sql = ''
         return sql
 
+    @operation
     def apply_ddl(self):
         self.schema.logger.info("Applying ddl from file to database")
         sql = self.get_ddl()
@@ -89,6 +95,27 @@ class FlockTable(object):
             self.schema.logger.warn("Deleting existing database table")
             self.clean_database()
         self.schema.execute(sql)
+
+    @operation
+    def clean_ddl(self):
+        """
+            Delete ddl statemnents from the definitions directory
+        """
+        if os.path.exists(table.ddl_filename):
+            os.remove(table.ddl_filename)
+
+    @operation
+    def generate_ddl_from_slice_data(self):
+        """
+            Generate DDL statements based on the shape of the slice data
+        """
+        slices = self.get_slice_filenames()
+        if not slices:
+            raise FlockNoData("Refusing to build ddl with empty slices")
+
+        infiles = (open(f,'rb') for f in slices)
+        ddl,fieldmap = csv_to_ddl(infiles,self.full_name)
+        self.set_ddl(ddl,fieldmap=fieldmap)
 
     def mapper(self):
         return self.schema.get_mapper('{0}/csvfieldmap'.format(self.name))
@@ -99,11 +126,12 @@ class FlockTable(object):
     # The order and manner in which they are applied to the database is
     # completely undefined by default.
 
+    @operation
     def write_slice_to_file(self,slice,slice_name=None):
         "Takes a 2d array (with headers) and dumps it to a csv file"
         if not slice_name:
             slice_name = self.schema.uuid('slice')
-        filename = os.path.join(self.data_root,'slice',slice_name)
+        filename = self.get_slice_filename(slice_name)
         directory = os.path.dirname(filename)
 
         if not os.path.exists(directory):
@@ -115,16 +143,38 @@ class FlockTable(object):
             self.logger.debug("New slice file at {0}".format(filename))
 
         writer = UnicodeWriter(open(filename,'wb'))
+        ct = -1
         for row in slice:
             writer.writerow(row)
-        self.logger.info("Wrote {0} records to slice file {1}".format(len(slice)-1,filename))
+            ct += 1
+
+        if ct <= 0:
+            self.logger.error("Disregarding empty slice {0}".format(filename))
+            os.remove(filename)
+        else:
+            self.logger.info("Wrote {0} records to slice file {1}".format(ct,filename))
+
         return filename,slice_name
 
+    @operation
     def read_slice_from_file(self,slice_name):
         "Reads data from a named csv file"
         filename = os.path.join(self.data_root,'slice',slice_name)
         reader = FancyReader(filename)
         return list(reader)
+
+    @operation
+    def apply_slices_to_database(self,transaction):
+        "Makes sure all slices are loaded. Does not attempt to load a slice if it has been loaded before and there is a record"
+        inserted_slices = self.query_metadata('inserted_slice')
+        filenames = self.get_slice_filenames()
+        new_slices = [f for f in filenames if f not in inserted_slices]
+        for n in new_slices:
+            self.logger.debug('New slice is about to be applied {0}'.format(n))
+        self.hot_insert_file_data(new_slices,transaction)
+        for f in new_slices:
+            self.set_metadata('inserted_slice','f')
+
 
     def get_slice_filenames(self):
         "Globs a list of availible files for the given function."
@@ -137,6 +187,10 @@ class FlockTable(object):
         "Returns a list of slice names based on filesystem contents."
         return [os.path.basename(filename) for filename in self.get_slice_filenames()]
 
+    def get_slice_filename(self,slice_name):
+        return os.path.join(self.data_root,'slice',slice_name)
+
+    @operation
     def clean_slice_data(self):
         for filename in self.get_slice_filenames():
             self.logger.info("Cleaning {0}".format(filename))
@@ -170,6 +224,9 @@ class FlockTable(object):
     def get_metadata(self,function):
         return self.schema.get_database_specific_metadata(self.name,function)
 
+    def query_metadata(self,function):
+        return self.schema.query_database_specific_metadata(self.name,function)
+
     def set_metadata(self,function,data):
         return self.schema.set_database_specific_metadata(self.name,function,data)
 
@@ -179,8 +236,18 @@ class FlockTable(object):
             and table_schema = %(schema_name)s) > 0""",
             dict(table_name=self.name,schema_name=self.schema.name)
         )
+
     def clean_database(self):
         return self.schema.execute('drop table {0}'.format(self.full_name))
+
+    @operation
+    def grant(self):
+        for privilege,users in self.schema.settings.DATABASE_USERS.iteritems():
+            self.execute('grant {privilege} on {full_name} to {users}',**dict(
+                users=','.join(users),
+                privilege=privilege,
+                full_name=self.full_name
+            )) 
 
     @operation
     def hot_insert_file_data(self,infiles,transaction):
@@ -256,6 +323,14 @@ class FlockTable(object):
             self.logger.debug("No PK found on {0}. Inserting data from {1} files.".format(*data))
             infiles = (open(f) for f in infiles)
             csv_import(infiles,self.full_name,self.schema.db,mapper=self.mapper())
+
+
+
+
+
+
+
+
 
 class FlockSchema(object):
     """
@@ -486,6 +561,13 @@ class FlockSchema(object):
         sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(self.name)
         return self.selectone(sql_template,[key,function])
 
+    @operation
+    def query_database_specific_metadata(self,key,function):
+        sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(self.name)
+        c = self.execute(sql_template,[key,function])
+        data = [row[0] for row in c.fetchall()]
+        return data
+
     # Operations 
 
     @operation
@@ -567,11 +649,11 @@ class Transaction:
         "Sets a savepoint"
         id = self.schema.uuid('sp')
         self.schema.execute('SAVEPOINT {0};'.format(id))
-        self.logger.debug('Setting database savepoint {0}'.format(id))
+        self.schema.logger.debug('Setting database savepoint {0}'.format(id))
         return id
 
     def return_to_savepoint(self,id):
         "Returns to the specified savepoint"
-        self.logger.warn('Returning to database savepoint {0}'.format(id))
+        self.schema.logger.warn('Returning to database savepoint {0}'.format(id))
         self.schema.execute('ROLLBACK TO SAVEPOINT {0};'.format(id))
 

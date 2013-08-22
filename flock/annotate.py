@@ -13,21 +13,32 @@ def operation(op):
     name = op.func_name
     
     def logged_operation(self, *args, **kwargs):
-
         report = ''
-        for i,k in enumerate(inspect.getargs(op.func_code).args):
-        	if k != 'self':
-	            v = args[i-1]#offest because I am matching self
-	            report += ' {0}:{1}'.format(k,str(v)[:100])
+        ref_args = inspect.getargs(op.func_code).args
+        for i,k in enumerate(ref_args):
+            if k != 'self':
+                try:
+                    v = args[i-1]#offest because I am matching self
+                    
+                except IndexError:
+                    if k in kwargs:
+                        v = kwargs[k]
+                    else:
+                        v = None
 
-        self.logger.info('Starting {0} with {1}'.format(name,report))
+                report += ' {0}:{1}'.format(k,str(v)[:100])
+
+
+
+
+        self.logger.info('{0} - @Operation `{1}` Starting with args: {2}'.format(self.name,name,report))
         try:
             data = op(self, *args, **kwargs)
         except Exception as e:
-            self.logger.error('Operation {0} failed with {1}'.format(name,e))
+            self.logger.error('{0} - @Operation `{1}` Failed with args: {2}'.format(self.name,name,e))
             self.logger.error('\n{0}'.format(traceback.format_exc()))
             raise e
-        self.logger.info('Operation {0} succeded with {1}'.format(name,report))
+        self.logger.info('{0} - @Operation `{1}` Succeded with args: {2}'.format(self.name,name,report))
         return data
 
     logged_operation.__dict__['operation'] = True

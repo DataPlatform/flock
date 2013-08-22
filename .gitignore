@@ -33,4 +33,4 @@ schemas/*
 log
 data
 .cache
-
+.log
