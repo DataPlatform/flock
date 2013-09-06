@@ -26,7 +26,7 @@ def operation(op):
                     else:
                         v = None
 
-                report += ' {0}:{1}'.format(k,str(v)[:100])
+                report += ' {0}:{1}'.format(k,str(v)[:100].encode('utf-8'))
 
 
 

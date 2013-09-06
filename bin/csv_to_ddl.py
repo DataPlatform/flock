@@ -64,7 +64,15 @@ def csv_to_ddl(infiles,table_name,map_fields=True,logger=None,encoding=None):
         if map_fields:
             column_name = fieldmap[column_name]
 
-        fields_as_sql +='\t{0} {1}, \n'.format(column_name,inferer.export())
+        column_type = inferer.export()
+
+        if column_type == 'boolean' and column_name.lower().endswith('id'):
+            #Gotcha encountered in tables with one row and an autonumbered id field:
+            #This logic does not belong inside the Inferer I think.
+            inferer.is_bool = False
+            column_type = inferer.export()
+
+        fields_as_sql +='\t{0} {1}, \n'.format(column_name,column_type)
         
     fields_as_sql = fields_as_sql.strip().strip(',')
 

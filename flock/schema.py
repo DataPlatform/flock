@@ -24,11 +24,11 @@ class FlockTable(object):
             For table specific ops
         """
         self.name = table_name
-        self.database_table_name = table_name.lower()
+        self.database_table_name = table_name
         self.schema = schema
         self.full_name = self.schema.name + '.' + self.database_table_name
         self.ddl_filename = self.get_schema_filename('definition')
-        self.data_root = os.path.abspath('{self.schema.settings.DATA_DIRECTORY}/{self.name}'.format(**dict(self=self)))
+        self.data_root = os.path.abspath('{self.schema.settings.DATA_DIRECTORY}/{self.schema.db_name}/{self.name}'.format(**dict(self=self)))
 
         #Need to store mappings of field names when they are transformed from incoming csv's
         
@@ -112,10 +112,12 @@ class FlockTable(object):
         slices = self.get_slice_filenames()
         if not slices:
             raise FlockNoData("Refusing to build ddl with empty slices")
-
-        infiles = (open(f,'rb') for f in slices)
-        ddl,fieldmap = csv_to_ddl(infiles,self.full_name,logger=self.logger,encoding='utf-8')
-        self.set_ddl(ddl,fieldmap=fieldmap)
+        try:
+            infiles = (open(f,'rb') for f in slices)
+            ddl,fieldmap = csv_to_ddl(infiles,self.full_name,logger=self.logger,encoding='utf-8')
+            self.set_ddl(ddl,fieldmap=fieldmap)
+        except StopIteration as e:
+            raise FlockNoData('Table appears to have no slice data ' + str(e))
 
     def mapper(self):
         return self.schema.get_mapper('{0}/csvfieldmap'.format(self.name))
@@ -132,10 +134,7 @@ class FlockTable(object):
         if not slice_name:
             slice_name = self.schema.uuid('slice')
         filename = self.get_slice_filename(slice_name)
-        directory = os.path.dirname(filename)
 
-        if not os.path.exists(directory):
-            os.makedirs(directory)
 
         if os.path.exists(filename):
             self.logger.debug("Overwriting slice file at {0}".format(filename))
@@ -160,7 +159,7 @@ class FlockTable(object):
     def read_slice_from_file(self,slice_name):
         "Reads data from a named csv file"
         filename = os.path.join(self.data_root,'slice',slice_name)
-        reader = FancyReader(filename,encoding='utf-8')
+        reader = FancyReader(open(filename,'rb'),encoding='utf-8')
         return list(reader)
 
     @operation
@@ -168,7 +167,7 @@ class FlockTable(object):
         "Makes sure all slices are loaded. Does not attempt to load a slice if it has been loaded before and there is a record"
         inserted_slices = self.query_metadata('inserted_slice')
         filenames = self.get_slice_filenames()
-        new_slices = [f for f in filenames if f not in inserted_slices]
+        new_slices = [f for f in filenames if os.path.basename(f) not in inserted_slices]
         for n in new_slices:
             self.logger.debug('New slice is about to be applied {0}'.format(n))
         self.hot_insert_file_data(new_slices,transaction)
@@ -179,7 +178,7 @@ class FlockTable(object):
         "Globs a list of availible files for the given function."
         data = dict(self=self,function='slice')
         p = "{self.data_root}/{function}/*".format(**data)
-        filenames = glob.glob(p)
+        filenames = sorted(glob.glob(p))
         return filenames
 
     def get_slice_names(self):
@@ -187,7 +186,11 @@ class FlockTable(object):
         return [os.path.basename(filename) for filename in self.get_slice_filenames()]
 
     def get_slice_filename(self,slice_name):
-        return os.path.join(self.data_root,'slice',slice_name)
+        filename = os.path.join(self.data_root,'slice',slice_name)
+        directory = os.path.dirname(filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        return filename
 
     @operation
     def clean_slice_data(self):
@@ -241,15 +244,15 @@ class FlockTable(object):
 
     @operation
     def grant(self):
-        for privilege,users in self.schema.settings.DATABASE_USERS.iteritems():
-            self.execute('grant {privilege} on {full_name} to {users}',**dict(
+        for privilege,users in self.schema.settings.DATABASE_PERMISSIONS.iteritems():
+            self.schema.execute('grant {privilege} on {full_name} to {users}',**dict(
                 users=','.join(users),
                 privilege=privilege,
                 full_name=self.full_name
             )) 
 
     @operation
-    def hot_insert_file_data(self,infiles,transaction):
+    def hot_insert_file_data(self,infiles,transaction,encoding='utf-8'):
         """
             Take data from staging csv's and insert them to the database
              - Uses a temp table to stage data
@@ -273,8 +276,8 @@ class FlockTable(object):
 
 
                 self.schema.execute(temp_table_ddl)
-
-                csv_import([open(infile)],temp_tablename,self.schema.db,mapper=self.mapper())
+                self.logger.debug('hot_insert {0} {1}'.format(encoding,infile.name))
+                csv_import([open(infile)],temp_tablename,self.schema.db,mapper=self.mapper(),encoding=encoding)
                 kwargs = dict(full_name=self.full_name,temp_name=temp_tablename,primary_keys=primary_keys)
 
                 try:
@@ -321,7 +324,7 @@ class FlockTable(object):
             data = self.full_name,num_files
             self.logger.debug("No PK found on {0}. Inserting data from {1} files.".format(*data))
             infiles = (open(f) for f in infiles)
-            csv_import(infiles,self.full_name,self.schema.db,mapper=self.mapper())
+            csv_import(infiles,self.full_name,self.schema.db,mapper=self.mapper(),encoding=encoding)
 
 
 
@@ -358,6 +361,13 @@ class FlockSchema(object):
         self.args = args
         self.name = os.path.split(args.schema)[1]
 
+        #Init the database name early so we can test which environment we are in
+        if args.db_name:
+            self.db_name = args.db_name
+        else:
+            assert self.settings.DEFAULT_DATABASE
+            self.db_name = self.settings.DEFAULT_DATABASE
+
         #set up logging
         if self.settings.LOG_TO_EMAIL:
             #mailhost, fromaddr, toaddrs, subject
@@ -370,9 +380,10 @@ class FlockSchema(object):
         else:
             smtp_args = None
 
-        if not os.path.exists(self.settings.LOG_DIRECTORY):
-            os.makedirs(self.settings.LOG_DIRECTORY)
-        log_filename = os.path.join(self.settings.LOG_DIRECTORY,'{0}.log'.format(args.command if args.command else 'schema'))
+        log_directory = os.path.join(self.settings.LOG_DIRECTORY,self.db_name)
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+        log_filename = os.path.join(log_directory,'{0}.log'.format(args.command if args.command else 'schema'))
         self.logger = get_logger('schema.' + self.name,log_filename,smtp_args=smtp_args)
         self.logger.info('Logging online {0}'.format(self.name))
 
@@ -414,17 +425,11 @@ class FlockSchema(object):
             self.metadata = defaultdict(dict)
 
         #set up tables
-        self.tables = dict(((table_name,self.TableClass(table_name,self)) for table_name in self.settings.TABLES))
+        self.tables = OrderedDict(((table_name,self.TableClass(table_name,self)) for table_name in self.settings.TABLES))
 
         #set up db connection
 
         self.transaction_open = False
-
-        if args.db_name:
-            self.db_name = args.db_name
-        else:
-            assert self.settings.DEFAULT_DATABASE
-            self.db_name = self.settings.DEFAULT_DATABASE
 
         db_uri = self.settings.DATABASES[self.db_name]
         self.db = dial(db_uri)

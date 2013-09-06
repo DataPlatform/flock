@@ -5,4 +5,5 @@
  - Cookiecutter schema template
  - More types discovered. Also discover constraints.
  - exec()
+ - Add Table.primary_key and change hot_insert() to use it
 

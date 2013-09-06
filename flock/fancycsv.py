@@ -45,6 +45,7 @@ class FancyReader:
 
     def __init__(self, f, dialect=None, encoding=None, no_tabs =False, **kwds):
         filename = f.name
+        print 'FancyReader',encoding,filename
         self.f = UTF8Recoder(f,encoding=encoding)
         if not dialect:
             try:
@@ -119,6 +120,7 @@ class UnicodeWriter:
         self.inputencoding = None
 
     def writerow(self, row):
+        
         self.writer.writerow([s.encode("utf-8") for s in row])
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()

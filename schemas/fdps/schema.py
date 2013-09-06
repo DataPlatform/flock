@@ -18,7 +18,7 @@ class Schema(FlockSchema):
         A module to curate FDPS data exports
     """
     #Required (Importing here leaves a reference to the module as an attribute)
-    import settings
+    from schemas.fdps import settings
     @operation
     def download_new_data(self,procurements):
 
@@ -79,8 +79,9 @@ class Schema(FlockSchema):
         new_slices = [s for s in procurements.get_slice_filenames() if s not in seen_slices]
 
         self.logger.info('Found the following slices' + str(new_slices))
+
         with self.transaction() as transaction:
-            procurements.hot_insert_file_data(new_slices,transaction)
+            self.apply_slices_to_database()
 
 
     @command
