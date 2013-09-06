@@ -8,10 +8,11 @@ import argparse
 
 
 
-def csv_import(infiles,table,connection,mapper=lambda x: x):
+def csv_import(infiles,table,connection,mapper=lambda x: x,encoding=None):
     for infile in infiles:
         cursor = connection.cursor()
-        reader = fancycsv.FancyDictReader(infile,no_tabs=True)
+        print 'csv_import',encoding,infile.name
+        reader = fancycsv.FancyDictReader(infile,no_tabs=True,encoding=encoding)
         csv_fieldnames = list(reader.fieldnames)
         database_fieldnames = [mapper(x) for x in csv_fieldnames]
         # sys.stderr.write('\n\nCsv names: {0}\nDatabase names: {1}\n\n'.format(csv_fieldnames,database_fieldnames))
