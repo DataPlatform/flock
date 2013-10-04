@@ -27,7 +27,7 @@ class FlockTable(object):
             For table specific ops
         """
         self.name = table_name
-        self.database_table_name = table_name
+        self.database_table_name = table_name.lower()
         self.schema = schema
         self.full_name = self.schema.name + '.' + self.database_table_name
         self.ddl_filename = self.get_schema_filename('definition')
@@ -249,7 +249,8 @@ class FlockTable(object):
             return 0
 
     def clean_database(self):
-        self.schema.execute('delete from {0}.flock where key = \'{1}\'; commit;'.format(self.schema.name,self.database_table_name))
+        self.schema.execute('delete from {0}.flock where key = \'{1}\' and function = \'inserted_slice\'; commit;'.format(
+            self.schema.name,self.name))
         return self.schema.execute('drop table {0}'.format(self.full_name))
 
     @operation
