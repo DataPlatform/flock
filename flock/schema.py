@@ -17,6 +17,9 @@ except ImportError:
     from ordereddict import OrderedDict
 from bin.csv_to_ddl import csv_to_ddl
 
+from psycopg2 import IntegrityError,ProgrammingError,DataError
+
+
 class FlockTable(object):
 
     def __init__(self,table_name,schema):
@@ -60,7 +63,7 @@ class FlockTable(object):
         ddl = open(self.ddl_filename).read()
         if temporary:
             ddl = re.sub("create table","create temporary table", ddl, re.IGNORECASE)
-            temp_tablename = self.uuid('tmp')
+            temp_tablename = self.schema.uuid('tmp')
             ddl = ddl.replace(self.full_name,temp_tablename)
             return ddl,temp_tablename
         else:
@@ -72,7 +75,7 @@ class FlockTable(object):
     def set_ddl(self,ddl,fieldmap=None):
         "Stores the provided DDL in definitions/{self.name}.sql"
         open(self.ddl_filename,'wb').write(ddl)
-        self.logger.info('Wrote ddl to {0}'.format(self.ddl_filename))
+        self.logger.debug('Wrote ddl to {0}'.format(self.ddl_filename))
         key = self.name + '/csvfieldmap'
         self.schema.set_metadata(key,fieldmap)
         self.logger.debug('Updated metadata at key {0}'.format(key))
@@ -89,7 +92,7 @@ class FlockTable(object):
 
     @operation
     def apply_ddl(self):
-        self.schema.logger.info("Applying ddl from file to database")
+        self.schema.logger.debug("Applying ddl from file to database")
         sql = self.get_ddl()
         if self.table_exists():
             self.schema.logger.warn("Deleting existing database table")
@@ -170,9 +173,10 @@ class FlockTable(object):
         new_slices = [f for f in filenames if os.path.basename(f) not in inserted_slices]
         for n in new_slices:
             self.logger.debug('New slice is about to be applied {0}'.format(n))
-        self.hot_insert_file_data(new_slices,transaction)
+        report = self.hot_insert_file_data(new_slices,transaction)
         for f in new_slices:
             self.set_metadata('inserted_slice',os.path.basename(f))
+        return report
 
     def get_slice_filenames(self):
         "Globs a list of availible files for the given function."
@@ -195,7 +199,7 @@ class FlockTable(object):
     @operation
     def clean_slice_data(self):
         for filename in self.get_slice_filenames():
-            self.logger.info("Cleaning {0}".format(filename))
+            self.logger.debug("Cleaning {0}".format(filename))
             os.remove(filename)
 
     #Database interactions
@@ -236,10 +240,16 @@ class FlockTable(object):
         return self.schema.selectone("""SELECT (SELECT count(*) FROM information_schema.tables 
             where table_name = %(table_name)s
             and table_schema = %(schema_name)s) > 0""",
-            dict(table_name=self.name,schema_name=self.schema.name)
+            dict(table_name=self.database_table_name,schema_name=self.schema.name)
         )
+    def number_of_rows_in_db(self):
+        if self.table_exists():
+            return self.schema.selectone('select count(*) from {0}'.format(self.full_name))
+        else:
+            return 0
 
     def clean_database(self):
+        self.schema.execute('delete from {0}.flock where key = \'{1}\'; commit;'.format(self.schema.name,self.database_table_name))
         return self.schema.execute('drop table {0}'.format(self.full_name))
 
     @operation
@@ -266,6 +276,12 @@ class FlockTable(object):
         if primary_keys:
             #Upload to temp table remove duped records and then flush temp table to perm table
             #must do one file at a time do guard against dupes that can sometimes come of the wire from RN
+            report = dict(
+                method = 'fancy',
+                files_inserted = 0,
+                rows_updated = 0,
+                rows_inserted = 0
+            )
             for infile in infiles:
 
                 temp_table_ddl,temp_tablename = self.get_ddl(temporary=True)
@@ -276,10 +292,11 @@ class FlockTable(object):
 
 
                 self.schema.execute(temp_table_ddl)
-                self.logger.debug('hot_insert {0} {1}'.format(encoding,infile.name))
-                csv_import([open(infile)],temp_tablename,self.schema.db,mapper=self.mapper(),encoding=encoding)
+                self.logger.debug('hot_insert {0} {1}'.format(encoding,infile))
+                csv_import([open(infile,'rb')],temp_tablename,self.schema.db,mapper=self.mapper(),encoding=encoding)
                 kwargs = dict(full_name=self.full_name,temp_name=temp_tablename,primary_keys=primary_keys)
 
+                slice_size = self.schema.selectone('select count(*) from {0};'.format(temp_tablename))
                 try:
                     savepoint1 = transaction.savepoint()
                     self.logger.debug('Trying dumb insert')
@@ -319,13 +336,25 @@ class FlockTable(object):
                 args = rows_before,rows_after
                 self.logger.debug("There were {0} rows before and {1} rows after the file was processed.".format(*args))
 
+                #Calculate report
+                rows_inserted = rows_after - rows_before
+                report['files_inserted'] += 1
+                report['rows_updated'] += (slice_size - rows_inserted)
+                report['rows_inserted'] += rows_inserted
+
 
         else:
             data = self.full_name,num_files
             self.logger.debug("No PK found on {0}. Inserting data from {1} files.".format(*data))
+            report = dict(
+                method = 'simple',
+                rows_updated = 0,
+                files_inserted = len(infiles),
+            )
             infiles = (open(f) for f in infiles)
             csv_import(infiles,self.full_name,self.schema.db,mapper=self.mapper(),encoding=encoding)
 
+        return report
 
 
 
@@ -375,7 +404,7 @@ class FlockSchema(object):
                 self.settings.SMTP_SERVER,
                 self.settings.OWNER_EMAIL,
                 self.settings.LOG_DIST_LIST,
-                "Flock log for {0}".format(self.name)
+                "Flock log for {0} in {1}".format(self.name,self.db_name)
             ]
         else:
             smtp_args = None
@@ -507,7 +536,7 @@ class FlockSchema(object):
         if answer != None:
             answer = answer[0]
         sql_log_msg ='Statement is {0} `{1}` (clipped at 200 chars)'.format(answer,' '.join(cursor.query.split())[:200])
-        self.logger.info(sql_log_msg)
+        self.logger.debug(sql_log_msg)
         return answer
 
     def _schema_exists(self):
@@ -538,7 +567,7 @@ class FlockSchema(object):
         """
         if not self.transaction_open:
             try:
-                self.logger.info("Opening database transction")
+                self.logger.debug("Opening database transction")
                 self.transaction_is_open = True
                 yield Transaction(self)
             except Exception as e:
@@ -551,7 +580,7 @@ class FlockSchema(object):
 
         self.transaction_is_open = False
         self.db.commit()
-        self.logger.info('Committing database transaction')
+        self.logger.debug('Committing database transaction')
 
 
 
@@ -593,8 +622,17 @@ class FlockSchema(object):
     @command
     def shell(self):
         "Initialize Schema and drop into an IPython shell"
+
         self.logger.info("Entering interactive shell")
         schema = self
+
+        #Make a datastructure fot tables that is tab completion friendly
+        class O: pass
+        tables = O()
+        for k,v in self.tables.iteritems():
+            setattr(tables,k,v)
+
+        #Make a shell
         import IPython
         IPython.embed()     
         self.logger.info("Exiting interactive shell")
