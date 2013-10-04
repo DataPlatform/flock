@@ -25,7 +25,14 @@ class UTF8Recoder:
         return self
 
     def next(self):
-        return self.reader.next().encode("utf-8")
+        self.buffer = self.reader.next()
+
+        #unicode newline should not be interpreted as a real newline in this context
+        while self.buffer[-1] == u'\u2028':
+            self.buffer += self.reader.next()
+
+        return self.buffer.encode("utf-8")
+
 
     def charset_detect(self,f, chunk_size=4096):
         self.chardet_detector.reset()
@@ -120,7 +127,7 @@ class UnicodeWriter:
         self.inputencoding = None
 
     def writerow(self, row):
-        
+        "Write a list as a delimited row"
         self.writer.writerow([s.encode("utf-8") for s in row])
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
@@ -133,10 +140,14 @@ class UnicodeWriter:
         self.queue.truncate(0)
 
     def writerows(self, rows):
+        "Write a list of lists as csv data"
         for row in rows:
             self.writerow(row)
 
-
+    def write(self, row):
+        "For writing pre-formatted csv data"
+        data = self.encoder.encode(row)
+        self.stream.write(data)
 
 #Ensures field names are unique
 def fix_header(header):

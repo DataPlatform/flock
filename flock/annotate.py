@@ -2,49 +2,53 @@
 #flock.py with interfaces defined in a specific schema
 from datetime import datetime
 import inspect,traceback
+import logging
+
+def log_func(func,func_type,log_level):
+
+    name = func.func_name
+    
+    def logged_function(self, *args, **kwargs):
+        ref_args = inspect.getargs(func.func_code).args
+        report = ''
+        ref_args = inspect.getargs(func.func_code).args
+        for i,k in enumerate(ref_args):
+            if k == 'self':
+                continue
+            try:
+                v = args[i-1]
+            except IndexError:
+                if k in kwargs:
+                    v = kwargs[k]
+                else:
+                    v = None
+
+            report += '{0}:{1} '.format(k,str(v)[:100].encode('utf-8').replace('\n',' '))
+
+        self.logger.log(log_level,'@{0} `{1}` Starting with args: {2}'.format(func_type,name,report))
+        try:
+            data = func(self, *args, **kwargs)
+        except (Exception,KeyboardInterrupt) as e:
+            self.logger.error('@{0} `{1}` Failed with error: {2} and args: {3}\n{4}'.format(
+                func_type,name,e,report,
+                traceback.format_exc()
+            ))
+            raise e
+        self.logger.log(log_level,'@{0} `{1}` Succeded with args: {2}'.format(func_type,name,report))
+        return data
+
+    logged_function.__dict__[func_type] = True
+    logged_function.__doc__ = func.__doc__
+    logged_function.__name__ = func.__name__
+    return logged_function
+
 
 
 def command(cmd):
-    cmd.__dict__['command'] = True
-    return cmd
+    return log_func(cmd,'command',logging.INFO)
 
 def operation(op):
-
-    name = op.func_name
-    
-    def logged_operation(self, *args, **kwargs):
-        report = ''
-        ref_args = inspect.getargs(op.func_code).args
-        for i,k in enumerate(ref_args):
-            if k != 'self':
-                try:
-                    v = args[i-1]#offest because I am matching self
-                    
-                except IndexError:
-                    if k in kwargs:
-                        v = kwargs[k]
-                    else:
-                        v = None
-
-                report += ' {0}:{1}'.format(k,str(v)[:100].encode('utf-8'))
-
-
-
-
-        self.logger.info('{0} - @Operation `{1}` Starting with args: {2}'.format(self.name,name,report))
-        try:
-            data = op(self, *args, **kwargs)
-        except Exception as e:
-            self.logger.error('{0} - @Operation `{1}` Failed with args: {2}'.format(self.name,name,e))
-            self.logger.error('\n{0}'.format(traceback.format_exc()))
-            raise e
-        self.logger.info('{0} - @Operation `{1}` Succeded with args: {2}'.format(self.name,name,report))
-        return data
-
-    logged_operation.__dict__['operation'] = True
-    logged_operation.__doc__ = op.__doc__
-    logged_operation.__name__ = op.__name__
-    return logged_operation
+    return log_func(op,'operation',logging.DEBUG)
 
 def test(test):
 

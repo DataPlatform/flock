@@ -39,6 +39,10 @@ for schema_file_path in all_schema_files:
 	schema_path,_ = os.path.split(schema_file_path)
 	_,schema_name = os.path.split(schema_path)
 
+	if schema_name.startswith('{{'):
+		#schema is a template
+		continue
+
 
 	mod = import_from_path(schema_file_path)
 

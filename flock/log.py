@@ -5,7 +5,6 @@ from .fancyemail import send_email
 
 class BufferedSMTPHandler(handlers.SMTPHandler):
 	
-	#mailhost, fromaddr, toaddrs, subject, credentials=None, secure=None
 	def __init__(self,*args,**kwargs):
 		self.buffer = list()
 		self.flushes = 1
@@ -18,19 +17,26 @@ class BufferedSMTPHandler(handlers.SMTPHandler):
 		self.buffer.append(item)
 
 		if (dt.datetime.now() - self.last_flush) > dt.timedelta(minutes=60):
-			self.flush()
+			self.flush(final=False)
 
-	def flush(self,final=False):
+	def flush(self,final=True):
 
-		subject = self.subject + "[part {0}]".format(self.flushes)
+		subject = self.subject + " part{0}: ".format(self.flushes)
+
+		message = '\r\n'.join((str(self.format(item)).strip().replace('\n','<br>\n') for item in self.buffer))
+		num_errors = message.count('ERROR')
+		num_warnings = message.count('WARNING')
+
+		if num_errors or num_warnings:
+			subject += ' errors={0} warnings={1}'.format(str(num_errors),str(num_warnings))
+
 		
 		if final:
-			subject += " (Final)"
+			subject += " (final)"
 		else:
-			subject += " (Ongoing)"
+			subject += " (ongoing)"
 
-		message = '\r\n'.join((self.format(item) for item in self.buffer))
-
+		# send_email('cbpromgt01',subject,self.toaddrs,self.fromaddr,message)
 		send_email(self.mailhost,subject,self.toaddrs,self.fromaddr,message)
 
 		self.flushes += 1
@@ -38,7 +44,7 @@ class BufferedSMTPHandler(handlers.SMTPHandler):
 		self.buffer = list()
 
 	def close(self):
-		self.flush(final=True)
+		# self.flush(final=True)
 		super(logging.handlers.SMTPHandler,self).close()
 
 
@@ -53,6 +59,7 @@ def get_logger(name,log_filename,smtp_args=None,smtp_kwargs=None):
 
 
 	simple_formatter = logging.Formatter('[%(name)s] %(levelname)s, %(asctime)s, %(message)s')
+	html_formatter = logging.Formatter('<strong>%(levelname)s</strong>, %(asctime)s, %(message)s<br>',datefmt='%m/%d %H:%M')
 
 	# Second handler writes to stderr
 	console = logging.StreamHandler()
@@ -66,6 +73,8 @@ def get_logger(name,log_filename,smtp_args=None,smtp_kwargs=None):
 		if smtp_kwargs == None:
 			smtp_kwargs = dict()
 		email_handler = BufferedSMTPHandler(*smtp_args,**smtp_kwargs)
+		email_handler.setLevel(logging.INFO)
+		email_handler.setFormatter(html_formatter)
 		logger.addHandler(email_handler)
 		console.setFormatter(simple_formatter)
 
