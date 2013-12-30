@@ -1,3 +1,29 @@
+#download and install rpm that adds a yum repo hosted on postgres.org
+curl -kO http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-centos93-9.3-1.noarch.rpm
+sudo rpm -ivh pgdg-centos93-9.3-1.noarch.rpm
+#install postgres 9.3
+sudo yum install posgresql93 postgresql93-server -y
+
+#create the database in this directory
+sudo mkdir /var/lib/pgsql/9.3
+sudo chown -R postgres:postgres /var/lib/pgsql/9.3
+sudo service postgresql-9.3 initdb -D /var/lib/pgsql/9.3/data
+
+#start postgres
+sudo service postgresql-9.3 start
+
+#start postgres to be sure it starts
+sudo chkconfig postgresql-9.3 on
+
+#install python setuptools
+sudo yum install python-setuptools -y
+
+#install postgres-dev because we need it for psycopg2
+sudo yum install postgresql-devel -y
+
+# following packages are required for python package lxml
+sudo yum install libxml2-devel libxslt-devel -y
+
 #Install development tools
 sudo yum groupinstall "Development tools" -y
 sudo yum install zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel -y
@@ -23,22 +49,3 @@ sudo /usr/local/bin/easy_install-2.7 virtualenv
 . .py/sys27/bin/activate
 
 
-#download and install rpm that adds a yum repo hosted on postgres.org
-curl -kO http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-centos93-9.3-1.noarch.rpm
-sudo rpm -ivh pgdg-centos93-9.3-1.noarch.rpm
-#install postgres 9.3
-sudo yum install posgresql93 postgresql93-server -y
-
-#create the database in this directory
-sudo mkdir /var/lib/pgsql/9.3
-sudo chown -R postgres:postgres /var/lib/pgsql/9.3
-sudo service postgresql-9.3 initdb -D /var/lib/pgsql/9.3/data
-
-#start postgres
-sudo service postgresql-9.3 start
-
-#start postgres to be sure it starts
-sudo chkconfig postgresql-9.3 on
-
-#install python setuptools
-sudo yum install python-setuptools -y
