@@ -14,8 +14,8 @@ The goal is for users to be able to describe data lifecycles using code that res
 
 Requirements:
 
-- Python 2.6+ / pip / virtualenv
-- Postgres 9.2 
+- Python 2.7+ / pip / virtualenv
+- Postgres 9.3 
 
 To get started 
 ```sh 
