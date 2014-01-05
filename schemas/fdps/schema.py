@@ -7,7 +7,6 @@ from flock.schema import FlockSchema,FlockTable,command,operation,test
 from datetime import datetime,date,timedelta
 from psycopg2 import IntegrityError,ProgrammingError,DataError
 from bin.csv_to_ddl import csv_to_ddl
-from fabric.api import lcd,local
 #Schema specific
 from fdps import get_fdps_slice
 

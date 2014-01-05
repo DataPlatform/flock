@@ -1,4 +1,4 @@
-#argparse==1.2.1
+argparse
 ipython==0.13.2
 paramiko==1.10.1
 psycopg2

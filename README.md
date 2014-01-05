@@ -31,5 +31,15 @@ cp schemas/fdps/example_private schemas/fdps/private # Take a moment to peek at 
 python flock.py fdps bootstrap
 ```
 
+Note: edit your /var/lib/pgsql/9.3/data/pg_hba.conf file to allow IP
+```sh
+# IPv6 local connections:
+host    all             all             ::1/128                 trust
+```
+
+and restart your postgres:
+```sh
+sudo service postgresql-9.3 restart
+```
 
 
