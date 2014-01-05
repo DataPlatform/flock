@@ -21,9 +21,7 @@ To get started
 ```sh 
 git clone https://github.com/exafox/flock
 cd flock
-cp example_private private
 . init.sh
-python flock.py -h
 ```
 
 There is an example in schemas/fdpc. To build it:

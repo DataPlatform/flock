@@ -1,3 +1,6 @@
+mkdir build
+cd build
+
 #download and install rpm that adds a yum repo hosted on postgres.org
 curl -kO http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-centos93-9.3-1.noarch.rpm
 sudo rpm -ivh pgdg-centos93-9.3-1.noarch.rpm
@@ -11,6 +14,9 @@ sudo service postgresql-9.3 initdb -D /var/lib/pgsql/9.3/data
 
 #start postgres
 sudo service postgresql-9.3 start
+
+# add user vagrant as a superuser  (for development env)
+sudo -u postgres psql -U postgres -d postgres -c "CREATE ROLE vagrant with SUPERUSER LOGIN  PASSWORD 'password';"
 
 #start postgres to be sure it starts
 sudo chkconfig postgresql-9.3 on
@@ -27,25 +33,18 @@ sudo yum install libxml2-devel libxslt-devel -y
 #Install development tools
 sudo yum groupinstall "Development tools" -y
 sudo yum install zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel -y
-
+sudo yum install python-devel -y
 #Download and install Python 2.7.6
-mkdir build
-cd build
 wget http://www.python.org/ftp/python/2.7.6/Python-2.7.6.tar.xz
 tar xvf Python-2.7.6.tar.xz
 cd Python-2.7.6
 ./configure --prefix=/usr/local
-make && sudo make altinstall
+make && sudo make install
 cd ..
 #Setuptools
-curl -kO https://pypi.python.org/packages/source/s/setuptools/setuptools-1.1.6.tar.gz
-tar xzf setuptools-1.1.6.tar.gz
-cd setuptools-1.1.6
-sudo /usr/local/bin/python2.7 setup.py install
-cd ..
-# Set up virtualenv
-sudo /usr/local/bin/easy_install-2.7 virtualenv
-/usr/local/bin/virtualenv-2.7 --distribute .py/sys27
-. .py/sys27/bin/activate
+curl -O https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
+python ez_setup.py
+sudo easy_install pip
+sudo pip install virtualenv
 
 
