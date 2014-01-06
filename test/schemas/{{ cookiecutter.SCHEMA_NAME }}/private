@@ -1,0 +1,3 @@
+#export {{ APP_NAME }}_dev_db_uri=postgres://foxs:jd02375j54y3l329ekjJWSGHWS@localhost/fdps_dev
+#export {{ APP_NAME }}_test_db_uri=postgres://foxs:jd02375j54y3l329ekjJWSGHWS@localhost/fdps_test
+#export {{ APP_NAME }}_prod_db_uri=postgres://foxs:jd02375j54y3l329ekjJWSGHWS@localhost/fdps_prod
