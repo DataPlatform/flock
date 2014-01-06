@@ -387,9 +387,9 @@ class FlockSchema(object):
         )
 
         subparsers = parser.add_subparsers(
-            title='Title the first',
+            title='Availible commands',
             dest='command',
-            metavar='<schema>',
+            metavar='<command>',
         )
 
 
