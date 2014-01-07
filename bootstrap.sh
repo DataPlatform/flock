@@ -1,4 +1,3 @@
-mkdir build
 cd build
 
 #download and install rpm that adds a yum repo hosted on postgres.org
@@ -39,12 +38,12 @@ wget http://www.python.org/ftp/python/2.7.6/Python-2.7.6.tar.xz
 tar xvf Python-2.7.6.tar.xz
 cd Python-2.7.6
 ./configure --prefix=/usr/local
-make && sudo make install
+make && sudo make altinstall
 cd ..
 #Setuptools
 curl -O https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
-python ez_setup.py
-sudo easy_install pip
-sudo pip install virtualenv
+/usr/local/bin/python2.7 ez_setup.py
+/usr/local/bin/easy_install-2.7 pip
+/usr/local/bin/pip2.7 install virtualenv
 
 
