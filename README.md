@@ -19,16 +19,16 @@ Requirements:
 
 To get started 
 ```sh 
-git clone https://github.com/exafox/flock
+git clone https://github.com/DataPlatform/flock
 cd flock
 . init.sh
 ```
 
-There is an example in schemas/fdpc. To build it:
+There is an example in test/schemas/fdpc. To build it:
 ```sh 
 cp schemas/fdps/example_private schemas/fdps/private # Take a moment to peek at / modify this file and make sure the referenced databases exist
-. init.sh #Init compiles and sources your private settings
-python flock.py fdps bootstrap
+. init.sh && cd test/schema/fdps #Init compiles and sources your private settings
+python schema.py bootstrap
 ```
 
 Note: edit your /var/lib/pgsql/9.3/data/pg_hba.conf file to allow IP

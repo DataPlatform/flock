@@ -30,3 +30,6 @@ pip install -r requirements.txt
 #Populate crontab
 #cat schemas/*/crontab >> ~/crontab
 #crontab ./crontab
+
+#There is a better way to persist this
+export PYTHONPATH=`pwd`
