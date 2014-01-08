@@ -1,9 +1,7 @@
-Fabric==1.6.1
-#argparse==1.2.1
+argparse
 ipython==0.13.2
-ordereddict==1.1
 paramiko==1.10.1
-psycopg2==2.5
+psycopg2
 pycrypto==2.6
 suds==0.4
 chardet

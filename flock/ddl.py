@@ -2,6 +2,7 @@ from datetime import datetime
 
 
 class TypeInferer:
+
     """
         Watches a stream of values for common traits
         and can export a psql type based on what it observes
@@ -17,21 +18,24 @@ class TypeInferer:
 
     def __unicode__(self):
         return dict(
-            can_be_empty= self.can_be_empty,
-            is_bool = self.is_bool,
-            is_digit = self.is_digit,
-            count = self.count,
-            is_decimal = self.is_decimal,
-            max_length = self.max_length  
+            can_be_empty=self.can_be_empty,
+            is_bool=self.is_bool,
+            is_digit=self.is_digit,
+            count=self.count,
+            is_decimal=self.is_decimal,
+            max_length=self.max_length
         )
+
     def __repr__(self):
         return '<TypeInferer %s>' % self.__unicode__()
 
-    def observe(self,value):
+    def observe(self, value):
         value = value.strip()
         self.is_digit = self.is_digit and (value.isdigit() or value.isspace())
-        self.is_decimal = self.is_decimal and (self._is_decimal(value) or value.isspace())
-        self.is_bool = self.is_bool and (self._is_bool(value) or value.isspace())
+        self.is_decimal = self.is_decimal and (
+            self._is_decimal(value) or value.isspace())
+        self.is_bool = self.is_bool and (
+            self._is_bool(value) or value.isspace())
         self.is_dt = self.is_dt and (self._is_dt(value) or value.isspace())
 
         self.can_be_empty = self.can_be_empty or value.isspace()
@@ -57,10 +61,10 @@ class TypeInferer:
             answer = 'text'
         return answer
 
-    def _is_bool(self,value):
+    def _is_bool(self, value):
         return value.lower() in ("yes", "true", "t", "1", "no", "false", "f", "0")
 
-    def _is_dt(self,value):
+    def _is_dt(self, value):
         try:
             datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
             return True
@@ -72,7 +76,7 @@ class TypeInferer:
                 pass
         return False
 
-    def _is_decimal(self,value):
+    def _is_decimal(self, value):
         try:
             float(value)
             return True

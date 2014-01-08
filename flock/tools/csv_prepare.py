@@ -1,14 +1,15 @@
-import sys,argparse,os,csv,json
-from flock import fancycsv,eyeoh
+import sys
+import argparse
+import os
+import csv
+import json
+from flock import fancycsv, eyeoh
 from flock.parsers import *
 
 
-
-#do work here
-
-
-def prepare_csv(infile,outfile):
-    reader = fancycsv.FancyReader(infile,no_tabs=True)
+# do work here
+def prepare_csv(infile, outfile):
+    reader = fancycsv.FancyReader(infile, no_tabs=True)
     writer = fancycsv.UnicodeWriter(outfile)
     header = fancycsv.fix_header(reader.next())
     writer.writerow(header)
@@ -19,7 +20,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description='Transforms csv data to a postgres style ddl statement',
-        parents=[multifile_input_parser,file_output_parser]
+        parents=[multifile_input_parser, file_output_parser]
     )
     args = parser.parse_args()
 
@@ -31,14 +32,7 @@ if __name__ == '__main__':
             # refix output vectors
             if args.inline:
                 args.outfile = infile.name
-            #and go
+            # and go
             with eyeoh.fileoutput(args) as outfile:
-                prepare_csv(infile,outfile)
+                prepare_csv(infile, outfile)
                 infile.close()
-
-
-
-
-
-
-

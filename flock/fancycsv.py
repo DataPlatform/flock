@@ -1,19 +1,25 @@
 "Collection of code for dealing with csv gotchas and common operations"
 
-#Originally taken from http://docs.python.org/2/library/csv.html but has been modified
+# Originally taken from http://docs.python.org/2/library/csv.html but has
+# been modified
 
-import csv, codecs, cStringIO
+import csv
+import codecs
+import cStringIO
 from collections import defaultdict
 from chardet.universaldetector import UniversalDetector
 
+
 class UTF8Recoder:
+
     """
         Iterator that reads an encoded stream and reencodes the input to UTF-8
     """
+
     def __init__(self, f, encoding=None):
         if not encoding:
                 self.chardet_detector = UniversalDetector()
-                tempf = open(f.name,'rb')
+                tempf = open(f.name, 'rb')
                 self.encoding = self.charset_detect(tempf)['encoding']
                 tempf.close()
         else:
@@ -27,36 +33,40 @@ class UTF8Recoder:
     def next(self):
         self.buffer = self.reader.next()
 
-        #unicode newline should not be interpreted as a real newline in this context
+        # unicode newline should not be interpreted as a real newline in this
+        # context
         while self.buffer[-1] == u'\u2028':
             self.buffer += self.reader.next()
 
         return self.buffer.encode("utf-8")
 
-
-    def charset_detect(self,f, chunk_size=4096):
+    def charset_detect(self, f, chunk_size=4096):
         self.chardet_detector.reset()
         while 1:
             chunk = f.read(chunk_size)
-            if not chunk: break
+            if not chunk:
+                break
             self.chardet_detector.feed(chunk)
-            if self.chardet_detector.done: break
+            if self.chardet_detector.done:
+                break
         self.chardet_detector.close()
         return self.chardet_detector.result
 
+
 class FancyReader:
+
     """
         Reader that detects encoding and is a place for some 
         domain specific logic that is unpleasant
     """
 
-    def __init__(self, f, dialect=None, encoding=None, no_tabs =False, **kwds):
+    def __init__(self, f, dialect=None, encoding=None, no_tabs=False, **kwds):
         filename = f.name
-        print 'FancyReader',encoding,filename
-        self.f = UTF8Recoder(f,encoding=encoding)
+        print 'FancyReader', encoding, filename
+        self.f = UTF8Recoder(f, encoding=encoding)
         if not dialect:
             try:
-                dialect = csv.Sniffer().sniff(open(filename,'rb').readline())
+                dialect = csv.Sniffer().sniff(open(filename, 'rb').readline())
             except:
                 dialect = csv.excel
         else:
@@ -77,7 +87,7 @@ class FancyReader:
         if self.no_tabs:
             row = [' '.join(s.split()) for s in row]
 
-        #Assuming csv files have headers!
+        # Assuming csv files have headers!
         if not self.header:
             self.header = row
         return row
@@ -87,25 +97,27 @@ class FancyReader:
 
 
 class FancyDictReader:
+
     """
     A UnicodeDictReader and a place for some domain specific logic that is unpleasant. 
     """
 
-    def __init__(self, f, mapper=lambda x: x, unicode_errors="",**kwds):
+    def __init__(self, f, mapper=lambda x: x, unicode_errors="", **kwds):
         # f = UTF8Recoder(f, encoding)
         self.reader = FancyReader(f, **kwds)
         self.fieldnames = [mapper(h) for h in self.reader.fixed_header()]
         self.dialect = self.reader.dialect
-        
-        #refusing to deal with duplicated fieldnames
-        assert len(self.fieldnames) == len(set(self.fieldnames))
 
+        # refusing to deal with duplicated fieldnames
+        assert len(self.fieldnames) == len(set(self.fieldnames))
 
     def next(self):
         row = self.reader.next()
-        #zip and itertools.izip_longest both don't have correct response to uneven list sizes
+        # zip and itertools.izip_longest both don't have correct response to
+        # uneven list sizes
         lr = len(row)
-        row_zipped = ((k,row[i] if i < lr else '') for i,k in enumerate(self.fieldnames))
+        row_zipped = ((k, row[i] if i < lr else '')
+                      for i, k in enumerate(self.fieldnames))
         return dict(row_zipped)
 
     def __iter__(self):
@@ -113,6 +125,7 @@ class FancyDictReader:
 
 
 class UnicodeWriter:
+
     """
     A CSV writer which will write rows to CSV file "f",
     which is encoded in the given encoding.
@@ -149,18 +162,20 @@ class UnicodeWriter:
         data = self.encoder.encode(row)
         self.stream.write(data)
 
-#Ensures field names are unique
+# Ensures field names are unique
+
+
 def fix_header(header):
     """
         Files come in with duped header names that need to be autonumbered. Must be idempotent.
     """
     seen = defaultdict(list)
-    for i,h in enumerate(header):
+    for i, h in enumerate(header):
         seen[h].append(i)
-    for k,v in seen.iteritems():
-        #If there are duped fieldnames autonumber a suffix after the first one
+    for k, v in seen.iteritems():
+        # If there are duped fieldnames autonumber a suffix after the first one
         if len(v) > 1:
-            for j,i in list(enumerate(v))[1:]:
+            for j, i in list(enumerate(v))[1:]:
                 suffix = ' ' + str(j)
                 header[i] += suffix
     return header
