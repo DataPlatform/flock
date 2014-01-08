@@ -1,4 +1,4 @@
-#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------
 # Name:        module1
 # Purpose:
 #
@@ -15,15 +15,12 @@ from lxml import etree as et
 from collections import defaultdict
 import datetime as dt
 
-#Initialize Proxy
+# Initialize Proxy
 
 if 'https_proxy' in os.environ:
-    proxy_support = urllib2.ProxyHandler({"https":os.environ['https_proxy']})
+    proxy_support = urllib2.ProxyHandler({"https": os.environ['https_proxy']})
     opener = urllib2.build_opener(proxy_support)
     urllib2.install_opener(opener)
- 
-
-
 
 
 request_baseurl = 'https://www.fpds.gov/ezsearch/fpdsportal?s=FPDS&indexName=awardfull&templateName=1.4&q=LAST_MOD_DATE%3A{year}%2F{month}%2F{day}+FUNDING_AGENCY_ID%3A%22955F%22&rss=1&feed=atom0.3&start={offset}'
@@ -35,7 +32,7 @@ if not os.path.exists('.cache'):
     os.makedirs('.cache')
 
 
-def walk(node,tag_names=None):
+def walk(node, tag_names=None):
     if not tag_names:
         tag_names = []
 
@@ -52,8 +49,7 @@ def walk(node,tag_names=None):
             yield row
 
 
-
-def get_data(beginning,days,request_increment=10):
+def get_data(beginning, days, request_increment=10):
     """
         Generator that traverses the FDPS api and flattens found data.
     """
@@ -66,7 +62,8 @@ def get_data(beginning,days,request_increment=10):
     if days:
         days = range(days)
     else:
-        days = range(len(list(all_the_days_till_yesterday(beginning=beginning))))
+        days = range(
+            len(list(all_the_days_till_yesterday(beginning=beginning))))
 
     for day in days:
 
@@ -78,15 +75,15 @@ def get_data(beginning,days,request_increment=10):
             request_ModifiedDate = (beginning + dt.timedelta(
                 days=day))
             kwargs = dict(
-                year = str(request_ModifiedDate.year),
-                month = str(request_ModifiedDate.month).zfill(2),
-                day = str(request_ModifiedDate.day).zfill(2),
-                offset = request_index
+                year=str(request_ModifiedDate.year),
+                month=str(request_ModifiedDate.month).zfill(2),
+                day=str(request_ModifiedDate.day).zfill(2),
+                offset=request_index
             )
             request_url = request_baseurl.format(**kwargs)
             # print request_url
 
-            # # Submit request url and save response
+            # Submit request url and save response
             # k = hashlib.sha1(request_url).hexdigest()
             k = request_ModifiedDate.isoformat() + '_4_' + str(request_index)
             local = os.path.join('.cache', k)
@@ -144,18 +141,20 @@ def get_column_names(data):
             counts[column] += 1
     return column_names, counts
 
-def get_fdps_data(beginning,days,column_names=None):
+
+def get_fdps_data(beginning, days, column_names=None):
 
     data = list(get_data(beginning, days))
 
     if column_names == None:
         column_names, counts = get_column_names(data)
     else:
-        _,counts = get_column_names(data)
-    return data,column_names
+        _, counts = get_column_names(data)
+    return data, column_names
 
-def get_fdps_slice(beginning,days,column_names=None):
-    data,column_names = get_fdps_data(beginning,days)
+
+def get_fdps_slice(beginning, days, column_names=None):
+    data, column_names = get_fdps_data(beginning, days)
     assert len(list(set(column_names))) == len(column_names)
 
     slice = list([column_names[:]])
@@ -167,6 +166,6 @@ def get_fdps_slice(beginning,days,column_names=None):
 #     today = dt.datetime.now().date()
 #     delta = dt.timedelta()
 #     while (beginning + delta) < today:
-        
+
 #         yield beginning + delta
 #         delta += dt.timedelta(days=1)

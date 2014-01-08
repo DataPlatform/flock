@@ -1,6 +1,10 @@
-import tempfile,shutil,os,contextlib,glob,sys
+import tempfile
+import shutil
+import os
+import contextlib
+import glob
+import sys
 from .output import safefile
-
 
 
 @contextlib.contextmanager
@@ -35,11 +39,11 @@ def fileoutput(args):
         parent_dir = os.path.split(args.outfile)[0]
         assert os.path.exists(parent_dir)
         if os.path.exists(args.outfile):
-            #do writing in a tempfile and swap it in on close
+            # do writing in a tempfile and swap it in on close
             with safefile(args.outfile) as outfile:
                 yield outfile
         else:
-            outfile = open(args.outfile,'w')
+            outfile = open(args.outfile, 'w')
             yield outfile
             outfile.close()
     else:

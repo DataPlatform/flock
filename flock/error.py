@@ -1,7 +1,8 @@
 
 
 class FlockException(Exception):
-	pass
+    pass
+
 
 class FlockNoData(FlockException):
-	pass
+    pass
