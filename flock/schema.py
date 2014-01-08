@@ -4,7 +4,7 @@ import uuid,glob,json,contextlib,re
 from collections import defaultdict
 # from psycopg2.extras import Json
 
-from bin.csv_import import csv_import
+from flock.tools.csv_import import csv_import
 from .fancyimport import import_from_path
 from .db import dial,CustomJson
 from .annotate import operation,command,test
@@ -15,10 +15,12 @@ try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
-from bin.csv_to_ddl import csv_to_ddl
+from flock.tools.csv_to_ddl import csv_to_ddl
 
 from psycopg2 import IntegrityError,ProgrammingError,DataError
-
+from flock.parsers import optional_named_db_parser,schema_parser,optional_tables_parser
+import argparse
+from argparse import RawTextHelpFormatter
 
 class FlockTable(object):
 
@@ -372,12 +374,49 @@ class FlockSchema(object):
     """
 
 
-    def __init__(self,args):
+    def __init__(self):
 
-        assert args.schema
+
+
+        # create the top-level parser
+        parser = argparse.ArgumentParser(
+            prog='python schema.py',
+            description='Set off all operations specific to this schema',
+            formatter_class=RawTextHelpFormatter,
+            parents = [optional_named_db_parser,schema_parser]
+        )
+
+        subparsers = parser.add_subparsers(
+            title='Availible commands',
+            dest='command',
+            metavar='<command>',
+        )
+
+
+        #Iterate through every attribute on the schema class and register commands
+        for attr_name in dir(self):
+            attr = getattr(self,attr_name)
+            #Only callables (methods in this context) can have decorators
+            if inspect.ismethod(attr):
+
+                if 'command' in attr.im_func.__dict__:
+                    # schema_parser = command_subparsers.add_parser(
+                    subparsers.add_parser(
+                        attr.im_func.func_name, 
+                        help=attr.im_func.func_doc,
+                        parents=[optional_tables_parser]
+                        )
+
+        #Parse the args
+        self.args = args = parser.parse_args()
+
+
+
 
         #Check that settings have been configured
         assert self.settings
+        assert self.settings.SCHEMA_NAME
+
 
         # Assign a custom Table class to InjectedTableClass 
         # in your schema to override or create new functionality
@@ -388,8 +427,7 @@ class FlockSchema(object):
 
         assert self.TableClass
 
-        self.args = args
-        self.name = os.path.split(args.schema)[1]
+        self.name = os.path.split(self.settings.SCHEMA_NAME)[1]
 
         #Init the database name early so we can test which environment we are in
         if args.db_name:
@@ -419,7 +457,7 @@ class FlockSchema(object):
 
         #establish schema folder
 
-        self.schema_dir = args.schema
+        self.schema_dir = self.settings.SCHEMA_NAME
 
         if not os.path.exists(self.schema_dir):
             if raw_input('Schema {0} does not exist. Do you want to create it? [y/N]:'.format(self.schema_dir)) in ('y','Y'):
@@ -672,11 +710,18 @@ class FlockSchema(object):
                 if annotation in attr.im_func.__dict__:
                     yield attr
 
+    # Entry Points
+    def enter(self):
+        "Introspection to discover registered commands and present a"
+
+        #Retrieve and call the command
+        getattr(self,self.args.command)()
+
 #Dont call it a factory!
 @contextlib.contextmanager
-def get_schema(args,schema_class=FlockSchema):
+def get_schema(args,self=FlockSchema):
     "Context manager to set up and tear down Schemas"
-    schema = schema_class(args)
+    schema = self(args)
     yield schema
     schema.export_metadata()
 

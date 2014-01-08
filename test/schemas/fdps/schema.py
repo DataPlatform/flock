@@ -6,8 +6,7 @@ import os,os.path,shutil,json
 from flock.schema import FlockSchema,FlockTable,command,operation,test
 from datetime import datetime,date,timedelta
 from psycopg2 import IntegrityError,ProgrammingError,DataError
-from bin.csv_to_ddl import csv_to_ddl
-from fabric.api import lcd,local
+from flock.tools.csv_to_ddl import csv_to_ddl
 #Schema specific
 from fdps import get_fdps_slice
 
@@ -18,7 +17,8 @@ class Schema(FlockSchema):
         A module to curate FDPS data exports
     """
     #Required (Importing here leaves a reference to the module as an attribute)
-    from schemas.fdps import settings
+    import settings
+
     @operation
     def download_new_data(self,procurements):
 
@@ -112,3 +112,9 @@ class Schema(FlockSchema):
         "Test that the schema is working"
         self.update()
         return self.is_healthy()
+
+if __name__ == '__main__':
+    schema = Schema()
+    schema.enter()
+
+    
