@@ -35,3 +35,5 @@ data
 .cache
 .log
 .vagrant/
+
+.DS_Store
