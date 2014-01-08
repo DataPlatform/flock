@@ -3,10 +3,14 @@
     This script uses string manipulation to generate sql! 
     Mind what you feed it and be sure to check its outputs before executing them.
 """
-import sys,argparse,os,csv,json
+import sys
+import argparse
+import os
+import csv
+import json
 from flock import db
 from flock.parsers import *
-from flock import output,fancycsv,fancystring,eyeoh
+from flock import output, fancycsv, fancystring, eyeoh
 from flock.ddl import TypeInferer
 
 from collections import defaultdict
@@ -16,10 +20,7 @@ except ImportError:
     from ordereddict import OrderedDict
 
 
-
-
-
-def csv_to_ddl(infiles,table_name,map_fields=True,logger=None,encoding=None):
+def csv_to_ddl(infiles, table_name, map_fields=True, logger=None, encoding=None):
 
     def log(v):
         if logger:
@@ -31,30 +32,33 @@ def csv_to_ddl(infiles,table_name,map_fields=True,logger=None,encoding=None):
 
     for infile in infiles:
 
-        reader = fancycsv.FancyDictReader(infile,no_tabs=True,encoding=encoding)
+        reader = fancycsv.FancyDictReader(
+            infile, no_tabs=True, encoding=encoding)
 
         if len(set(reader.fieldnames)) != len(reader.fieldnames):
             raise Exception('Column names not unique. Use csv_prepare.py')
         if map_fields:
             mapped_fields = [fancystring.slugify(h) for h in reader.fieldnames]
-            fieldmap.update(OrderedDict(zip(reader.fieldnames,mapped_fields)))
+            fieldmap.update(OrderedDict(zip(reader.fieldnames, mapped_fields)))
 
-        #Now do all the observing
+        # Now do all the observing
         log("Observing {0} for type info".format(infile.name))
-        log("Input encoding is {0}, should be {1}".format(reader.reader.f.encoding,encoding))
+        log("Input encoding is {0}, should be {1}".format(
+            reader.reader.f.encoding, encoding))
         for row in reader:
             rows += 1
-            for k,v in row.iteritems():
+            for k, v in row.iteritems():
                 tracker[k].observe(v)
 
-    #Data collected now make some psql
+    # Data collected now make some psql
     fields_as_sql = ''
 
     assert len(tracker) > 0
 
-    #Dump info in original order
+    # Dump info in original order
     for column_name in reader.fieldnames:
-        log("Tracker is exporting column {0},{1},{2}".format(column_name,tracker[column_name].count,rows))
+        log("Tracker is exporting column {0},{1},{2}".format(
+            column_name, tracker[column_name].count, rows))
 
         if tracker[column_name].count != rows:
             log("Column was not found in all files!")
@@ -67,22 +71,23 @@ def csv_to_ddl(infiles,table_name,map_fields=True,logger=None,encoding=None):
         column_type = inferer.export()
 
         if column_type == 'boolean' and column_name.lower().endswith('id'):
-            #Gotcha encountered in tables with one row and an autonumbered id field:
-            #This logic does not belong inside the Inferer I think.
+            # Gotcha encountered in tables with one row and an autonumbered id field:
+            # This logic does not belong inside the Inferer I think.
             inferer.is_bool = False
             column_type = inferer.export()
 
-        fields_as_sql +='\t{0} {1}, \n'.format(column_name,column_type)
-        
+        fields_as_sql += '\t{0} {1}, \n'.format(column_name, column_type)
+
     fields_as_sql = fields_as_sql.strip().strip(',')
 
     template = '''create table {table_name} ( 
         {fields_as_sql}
     );'''
 
-    ddl = template.format(**dict(table_name=table_name,fields_as_sql=fields_as_sql))
+    ddl = template.format(
+        **dict(table_name=table_name, fields_as_sql=fields_as_sql))
     if map_fields:
-        return ddl,fieldmap
+        return ddl, fieldmap
     else:
         return ddl
 
@@ -90,9 +95,10 @@ def csv_to_ddl(infiles,table_name,map_fields=True,logger=None,encoding=None):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-            description='Transforms csv data to a postgres style ddl statement',
-            parents=[schema_parser,multifile_input_parser,ddl_file_output_parser]
-        )
+        description='Transforms csv data to a postgres style ddl statement',
+        parents=[schema_parser, multifile_input_parser,
+                 ddl_file_output_parser]
+    )
 
     args = parser.parse_args()
     print args
@@ -105,19 +111,20 @@ if __name__ == '__main__':
         infile = sys.stdin
     if args.sqlfile:
         assert os.path.exists(args.sqlfile)
-        outfile = open(args.outfile,'wb')
+        outfile = open(args.outfile, 'wb')
     else:
         outfile = sys.stdout
-    #Need schema import to remit found metadata, there is probably a better way to structure this
+    # Need schema import to remit found metadata, there is probably a better
+    # way to structure this
     with eyeoh.multifileinput(args) as infiles:
-        ddl = csv_to_ddl(infiles,args.table_name,map_fields=False)
+        ddl = csv_to_ddl(infiles, args.table_name, map_fields=False)
         outfile.write(ddl)
-    
 
 
 
 
-    #todo:
+
+    # todo:
     # enum discovery
     # date observer
     # indxes / fk's
