@@ -10,7 +10,7 @@ reqs = [str(ir.req) for ir in install_reqs]
 
 setup(
     name='Flock',
-    version='0.1.0',
+    version='0.1.0.a',
     author='Stefan Fox',
     author_email='Stefan.Fox@cfpb.gov',
     packages=['flock','flock.tools'],
