@@ -13,7 +13,7 @@ setup(
     version='0.1.0',
     author='Stefan Fox',
     author_email='Stefan.Fox@cfpb.gov',
-    packages=['flock',],
+    packages=['flock','flock.tools'],
     scripts=[],
     url='https://github.com/DataPlatform/flock/wiki/',
     license='',
