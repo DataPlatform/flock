@@ -1,2 +1,2 @@
-git+https://github.com/DataPlatform/flock.git@5465ec2e31d20b43b04ca2696ec39df31b98a35f#egg=flock
+git+https://github.com/DataPlatform/flock.git@v0.1#egg=flock
 
