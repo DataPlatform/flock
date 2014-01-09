@@ -267,10 +267,24 @@ class FlockTable(object):
         else:
             return 0
 
-    def clean_database(self):
-        self.schema.execute('delete from {0}.flock where key = \'{1}\' and function = \'inserted_slice\'; commit;'.format(
-            self.schema.name, self.name))
+    def clean_database(self,deep=False):
+        if not deep:
+            #preserving metadata that does not relate directly to the state of the database
+            sql = 'delete from {0}.flock where key = \'{1}\' and function = \'inserted_slice\';'.format(
+                self.schema.name,self.name)
+        else:
+            sql = 'delete from {0}.flock where key = \'{1}\';'.format(
+                self.schema.name,self.name)
+        self.schema.execute(sql)
         return self.schema.execute('drop table {0}'.format(self.full_name))
+
+    def clean(self):
+        if self.table_exists():
+            self.clean_database(deep=True)
+        self.schema.execute('delete from {0}.flock where key = \'{1}\';'.format(
+                self.schema.name,self.name))
+        self.clean_slice_data()
+
 
     @operation
     def grant(self):
@@ -331,7 +345,7 @@ class FlockTable(object):
 
                 except IntegrityError:
                     # Dupes were found somewhere. Take latter value.
-                    self.logger.warn(
+                    self.logger.debug(
                         'Dumb insert yielded IntegrityError: Trying with lookahead dupe deletion...')
                     transaction.return_to_savepoint(savepoint1)
                     self.schema.execute("delete from {full_name} \
@@ -347,7 +361,7 @@ class FlockTable(object):
                         # Dupes were found inside the same file. Take first
                         # value.
                         transaction.return_to_savepoint(savepoint2)
-                        self.logger.warn(
+                        self.logger.debug(
                             'Lookahead dupe deletion also yielded IntegrityError: Trying rank() insert...')
                         kwargs['fieldnames'] = ','.join(self.fieldnames())
                         self.schema.execute("""INSERT into {full_name} 
@@ -356,7 +370,7 @@ class FlockTable(object):
                                 FROM {temp_name}
                             ) t where t.rank = 1;""".format(**kwargs))
 
-                        self.logger.warn('rank() insert completed')
+                        self.logger.debug('rank() insert completed')
 
                 self.schema.execute("drop table {temp_name};".format(**kwargs))
 
