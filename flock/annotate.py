@@ -73,3 +73,30 @@ def test(test):
     logged_test.__name__ = test.__name__
 
     return logged_test
+
+
+def component(component_class):
+    """ Decorates flock component classes. Components are mixins that are assembled together."""
+
+    # We want to chain __init__ methods of component classes so they are all called in order
+
+    # Get the two __init__ methonds that need to be linked
+    this_init = getattr(component_class, '__init__', None)
+    if this_init.__bases__:
+        next_init = getattr(component_class.__bases__[0], '__init__', None)
+    else:
+        #No bases means we are done
+        next_init = None
+
+    # Make a new method to replace the current __init__ that links the chain
+    def new_init(self, *args, **kwargs):
+
+        if this_init:
+            this_init(self,*args,**kwargs)
+        if next_init:
+            next_init(self,*args,**kwargs)
+
+    # Swap in the new method
+    setattr(component_class, '__init__', __init__)
+
+    return component_class
