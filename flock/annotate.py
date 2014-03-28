@@ -74,7 +74,7 @@ def test(test):
 
     return logged_test
 
-
+#this is wrong. you want to annotate the application this way
 def component(component_class):
     """ Decorates flock component classes. Components are mixins that are assembled together."""
 
