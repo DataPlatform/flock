@@ -10,10 +10,9 @@ import settings
 
 
 
-class MySchema(Schema, Driver):
+class MySchema(Schema, PGDriver):
 
     #this is necessary
-    settings = settings
 
     def custom_init(self):
 
@@ -25,11 +24,13 @@ class MySchema(Schema, Driver):
 
 class PGApp(MySchema, Pipeline, PGDriver):
 
-	pass
+    settings = settings
+	
 
-class AlchemyApp(MySchema, Pipeline, AlchemyDriver):
+# class AlchemyApp(MySchema, Pipeline, AlchemyDriver):
 
-	pass
+#     settings = settings
+	
 
 
 class TestInitializationWithPostgres(unittest.TestCase):
@@ -38,29 +39,29 @@ class TestInitializationWithPostgres(unittest.TestCase):
     def test_init(self):
         """ Test we can initialize an app that does nothing at all"""
         
-        app = App()
+        app = PGApp()
         self.assertEqual(app.name,'test')
 
     def test_command(self):
         """ Test we can initialize an app that does nothing at all"""
         
-        app = App()
+        app = PGApp()
         app.enter()
 
-class TestInitializationWithAlchemy(unittest.TestCase):
+# class TestInitializationWithAlchemy(unittest.TestCase):
 
 
-    def test_init(self):
-        """ Test we can initialize an app that does nothing at all"""
+#     def test_init(self):
+#         """ Test we can initialize an app that does nothing at all"""
         
-        app = App()
-        self.assertEqual(app.name,'test')
+#         app = App()
+#         self.assertEqual(app.name,'test')
 
-    def test_command(self):
-        """ Test we can initialize an app that does nothing at all"""
+#     def test_command(self):
+#         """ Test we can initialize an app that does nothing at all"""
         
-        app = App()
-        app.enter()
+#         app = App()
+#         app.enter()
 
 
 if __name__ == '__main__':

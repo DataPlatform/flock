@@ -89,7 +89,12 @@ json.dumps(dt.datetime.now(), default=dthandler)
 # dumps =  partial(DateTimeJSONEncoder().encode)
 
 
-class Database(object):
-    def __
+class Driver(object):
+    def __init__(self,settings):
+        assert self.settings
 
+
+class Pipeline(object):
+    def __init__(self,settings):
+        assert self.settings
 

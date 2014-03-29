@@ -88,17 +88,41 @@ def flock(application_class):
     # Make a new method to replace the current __init__ that links the chain
     def new_init(self, *args, **kwargs):
 
+        application_class.logger.info("Initialixing {0}".format(application_class.__name__))
+
         # Do top level application initialization
         if this_init:
             this_init(self,*args,**kwargs)
 
         # Iterate through each component of the application and perform __init__
-        for component_class in application_class.__bases__[1:]:
+        for component_class in application_class.__bases__[:]:
+            
             component_init = getattr(component_class, '__init__', None)
             if component_init:
+                application_class.logger.debug("Initialixing {0}".format(component_class.__name__))
                 component_init(self,*args,**kwargs)
 
     # Swap in the new method
     setattr(application_class, '__init__', new_init)
+
+    # In the absence of having interfaces, we should at least check for conflicts among operations
+
+    # Keys are method names and values are the name of the class that provides the method
+    all_methods = dict()
+
+    #iterate through base classes, reversed so it is easy to see what is being overridden
+    for cls in reversed( application_class.__bases__ ):
+        #all attributes
+        for name in dir(cls):
+            attr = getattr(cls, name)
+
+            #check that the method and that it has been annotated as an @operation
+            if inspect.ismethod(attr) and 'operation' in attr.im_func.__dict__:
+
+                if name in all_methods:
+                    application_class.logger.info("Operation {0}() defined in {1} is being overridden by {2}".format(
+                        name,all_methods[name],cls.__name__))
+                all_methods[name] = cls.__name__
+
 
     return application_class
