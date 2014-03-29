@@ -74,29 +74,31 @@ def test(test):
 
     return logged_test
 
-#this is wrong. you want to annotate the application this way
-def component(component_class):
-    """ Decorates flock component classes. Components are mixins that are assembled together."""
 
-    # We want to chain __init__ methods of component classes so they are all called in order
 
-    # Get the two __init__ methonds that need to be linked
-    this_init = getattr(component_class, '__init__', None)
-    if this_init.__bases__:
-        next_init = getattr(component_class.__bases__[0], '__init__', None)
-    else:
-        #No bases means we are done
-        next_init = None
+def flock(application_class):
+    """ Wraps a flock application."""
+
+    # When using mixins not all __init__ methods are called. 
+    # This changes that behavior to ensure that all __init__methods are called.
+
+    #Get the __init__ method for te decorated class
+    this_init = getattr(application_class, '__init__', None)
 
     # Make a new method to replace the current __init__ that links the chain
     def new_init(self, *args, **kwargs):
 
+        # Do top level application initialization
         if this_init:
             this_init(self,*args,**kwargs)
-        if next_init:
-            next_init(self,*args,**kwargs)
+
+        # Iterate through each component of the application and perform __init__
+        for component_class in application_class.__bases__[1:]:
+            component_init = getattr(component_class, '__init__', None)
+            if component_init:
+                component_init(self,*args,**kwargs)
 
     # Swap in the new method
-    setattr(component_class, '__init__', __init__)
+    setattr(application_class, '__init__', new_init)
 
-    return component_class
+    return application_class
