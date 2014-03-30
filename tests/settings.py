@@ -6,17 +6,17 @@ SCHEMA_ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 SCHEMA_NAME = os.path.basename(SCHEMA_ROOT_DIRECTORY)
 
 
-_username = os.environ.get('USER','flock')
+_db_username = os.environ.get('USER','flock')
 
 DATABASES = {
-    'test': os.environ.get('FLOCK_TEST_DB_URI','postgres://{0}:password@localhost/flock_test'.format(_username)),
+    'test': os.environ.get('FLOCK_TEST_DB_URI','postgres://{0}:@localhost/flock_test'.format(_db_username)),
 }
 
 #Leaving DEFAULT_DATABASE for now so as not to break things. ENVIRONMENT is semantically better
 ENVIRONMENT = DEFAULT_DATABASE = 'test'
 
 DATABASE_PERMISSIONS = {
-    'all': [_username]
+    'all': [_db_username]
 }
 
 # Mainly for granting schema usage: Take set users from permissions above.
