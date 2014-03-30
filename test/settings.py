@@ -5,8 +5,6 @@ import os
 SCHEMA_ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 SCHEMA_NAME = os.path.basename(SCHEMA_ROOT_DIRECTORY)
 
-# Set these environment variables in flock/schemas/fdps/private
-# and `source flock/init.sh` to pull them into your environment
 
 _username = os.environ.get('USER','flock')
 

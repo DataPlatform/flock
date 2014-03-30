@@ -92,6 +92,18 @@ json.dumps(dt.datetime.now(), default=dthandler)
 class Driver(object):
     def __init__(self,settings):
         assert self.settings
+        # set up db connection
+
+        self.transaction_open = False
+
+        db_uri = self.settings.DATABASES[self.db_name]
+        self.db = dial(db_uri)
+
+        # set up schema inside database if it isn't already there
+
+        if self.db and not self._schema_exists():
+            with self.transaction() as transaction:
+                self._init_schema_with_db()
 
 
 class Pipeline(object):

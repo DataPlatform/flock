@@ -117,15 +117,15 @@ class Schema(object):
 
         self.schema_dir = self.settings.SCHEMA_NAME
 
-        if not os.path.exists(self.schema_dir):
-            if raw_input('Schema {0} does not exist. Do you want to create it? [y/N]:'.format(self.schema_dir)) in ('y', 'Y'):
-                os.makedirs(self.schema_dir)
-                open(os.path.join(self.schema_dir, '.generated'), 'w').write(
-                    'Code generation in play. Look out and use scm!')
-            else:
-                exit()
-            for d in ['definitions', 'pipelines', 'access']:
-                os.mkdir(os.path.join(self.schema_dir, d))
+        # if not os.path.exists(self.schema_dir):
+        #     if raw_input('Schema {0} does not exist. Do you want to create it? [y/N]:'.format(self.schema_dir)) in ('y', 'Y'):
+        #         os.makedirs(self.schema_dir)
+        #         open(os.path.join(self.schema_dir, '.generated'), 'w').write(
+        #             'Code generation in play. Look out and use scm!')
+        #     else:
+        #         exit()
+        #     for d in ['definitions', 'pipelines', 'access']:
+        #         os.mkdir(os.path.join(self.schema_dir, d))
 
         # get list of targeted tables
         # - targeted tables are a reaction to the constant desire to pass a table name
@@ -135,41 +135,15 @@ class Schema(object):
         if args.tables:
             self.settings.TABLES = args.tables
 
-        # set up file based metadata
 
-        if not self.args.metadatafile:
-            self.metadatafile_path = os.path.join(
-                self.schema_dir, '.metadata.json')
-        else:
-            self.metadatafile_path = os.path.abspath(args.metadatafile)
-        if os.path.exists(self.metadatafile_path):
-            try:
-                data = json.loads(open(self.metadatafile_path)
-                                  .read(), object_hook=OrderedDict)
-            except Exception as e:
-                print e
-                raise Exception(
-                    'Couldn\'t read metadata in file {0}'.format(self.metadatafile_path))
-            self.metadata = defaultdict(dict, data)
-        else:
-            self.metadata = defaultdict(dict)
 
         # set up tables
         self.tables = OrderedDict(((table_name, self.TableClass(table_name, self))
                                   for table_name in self.settings.TABLES))
 
-        # set up db connection
 
-        self.transaction_open = False
 
-        db_uri = self.settings.DATABASES[self.db_name]
-        self.db = dial(db_uri)
 
-        # set up schema inside database if it isn't already there
-
-        if self.db and not self._schema_exists():
-            with self.transaction() as transaction:
-                self._init_schema_with_db()
 
     def export_metadata(self):
         """

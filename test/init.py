@@ -3,6 +3,7 @@ import sys
 sys.path.append('../')
 from flock.schema import Schema
 from flock.table import Table
+from flock.global_metadata.file import Metadata
 from flock.db.postgres import Pipeline
 from flock.db.postgres import Driver as PGDriver
 import settings
@@ -22,7 +23,7 @@ class MySchema(Schema, PGDriver):
     def hydrate_schema(self):
         pass
 
-class PGApp(MySchema, Pipeline, PGDriver):
+class PGApp(MySchema, Pipeline, PGDriver, Metadata):
 
     settings = settings
 	
