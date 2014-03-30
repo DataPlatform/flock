@@ -2,7 +2,7 @@ import unittest
 import sys
 import logging
 sys.path.append('../')
-from flock.annotate import flock,operation
+from flock.annotate import flock, operation
 
 # Need a global to accumulate as we cannot retun data from __init__
 
@@ -12,7 +12,9 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
+
 class MixMaster(object):
+
     def __init__(self):
         self.accumulate.append('MixMaster')
 
@@ -36,11 +38,12 @@ class Mix2(object):
     def a(self):
         return 'Mix2'
 
+
 @flock
 class TestApp(
     MixMaster,
     Mix1,
-    Mix2):
+        Mix2):
 
     logger = logger
 
@@ -55,10 +58,10 @@ class TestInitializationWithComponents(unittest.TestCase):
 
     def test_init(self):
         """ Test we can initialize an app that does nothing at all"""
-        self.assertEqual(self.app.accumulate,['MixMaster','Mix1','Mix2'])
+        self.assertEqual(self.app.accumulate, ['MixMaster', 'Mix1', 'Mix2'])
 
     def test_collision(self):
-        self.assertEqual(self.app.a(),'Mix1')
+        self.assertEqual(self.app.a(), 'Mix1')
 
 
 if __name__ == '__main__':

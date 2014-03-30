@@ -85,12 +85,11 @@ class Schema(object):
         self.name = os.path.split(self.settings.SCHEMA_NAME)[1]
 
         # Init the database name early so we can test which environment we are
-        # in
         if args.db_name:
             self.db_name = args.db_name
         else:
-            assert self.settings.DEFAULT_DATABASE
-            self.db_name = self.settings.DEFAULT_DATABASE
+            assert self.settings.ENVIRONMENT
+            self.db_name = self.settings.ENVIRONMENT
 
         # set up logging
         if self.settings.LOG_TO_EMAIL:
@@ -135,15 +134,9 @@ class Schema(object):
         if args.tables:
             self.settings.TABLES = args.tables
 
-
-
         # set up tables
         self.tables = OrderedDict(((table_name, self.TableClass(table_name, self))
                                   for table_name in self.settings.TABLES))
-
-
-
-
 
     def export_metadata(self):
         """

@@ -12,7 +12,8 @@ DATABASES = {
     'test': os.environ.get('FLOCK_TEST_DB_URI','postgres://{0}:password@localhost/flock_test'.format(_username)),
 }
 
-DEFAULT_DATABASE = 'test'
+#Leaving DEFAULT_DATABASE for now so as not to break things. ENVIRONMENT is semantically better
+ENVIRONMENT = DEFAULT_DATABASE = 'test'
 
 DATABASE_PERMISSIONS = {
     'all': [_username]
