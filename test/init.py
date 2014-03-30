@@ -34,13 +34,15 @@ class PGApp(MySchema, Pipeline, PGDriver):
 
 
 class TestInitializationWithPostgres(unittest.TestCase):
+    def setUp(self):
+        sys.argv = ['init.py','test']
+        self.app = PGApp()
 
 
     def test_init(self):
         """ Test we can initialize an app that does nothing at all"""
         
-        app = PGApp()
-        self.assertEqual(app.name,'test')
+        self.assertEqual(self.app.name,'test')
 
     def test_command(self):
         """ Test we can initialize an app that does nothing at all"""

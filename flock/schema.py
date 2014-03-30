@@ -14,6 +14,7 @@ from .annotate import operation, command, test
 from .log import get_logger
 from .fancycsv import FancyReader, UnicodeWriter
 from .error import *
+from .table import Table
 try:
     from collections import OrderedDict
 except ImportError:
@@ -77,7 +78,7 @@ class Schema(object):
         try:
             self.TableClass = self.InjectedTableClass
         except AttributeError:
-            self.TableClass = FlockTable
+            self.TableClass = Table
 
         assert self.TableClass
 
