@@ -8,9 +8,9 @@ optional_db_parser = argparse.ArgumentParser(add_help=False)
 optional_db_parser.add_argument(
     '-d', "--db_uri", help="Database URI", type=str)
 
-optional_named_db_parser = argparse.ArgumentParser(add_help=False)
-optional_named_db_parser.add_argument(
-    '-d', "--db_name", help="Database Name", type=str)
+optional_named_environment_parser = argparse.ArgumentParser(add_help=False)
+optional_named_environment_parser.add_argument(
+    '-e', "--environment_name", help="Name of the environment to use", type=str)
 
 
 optional_tables_parser = argparse.ArgumentParser(add_help=False)

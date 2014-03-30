@@ -96,7 +96,7 @@ class Driver(object):
 
         self.transaction_open = False
 
-        db_uri = self.settings.DATABASES[self.db_name]
+        db_uri = self.settings.DATABASES[self.environment_name]
         self.db = dial(db_uri)
 
         # set up schema inside database if it isn't already there

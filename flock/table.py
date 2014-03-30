@@ -22,7 +22,7 @@ class Table(object):
         self.full_name = self.schema.name + '.' + self.database_table_name
         self.ddl_filename = self.get_schema_filename('definition')
         self.data_root = os.path.abspath(
-            '{self.schema.settings.DATA_DIRECTORY}/{self.schema.db_name}/{self.name}'.format(**dict(self=self)))
+            '{self.schema.settings.DATA_DIRECTORY}/{self.schema.environment_name}/{self.name}'.format(**dict(self=self)))
 
         # Need to store mappings of field names when they are transformed from
         # incoming csv's
@@ -246,14 +246,15 @@ class Table(object):
         else:
             return 0
 
-    def clean_database(self,deep=False):
+    def clean_database(self, deep=False):
         if not deep:
-            #preserving metadata that does not relate directly to the state of the database
+            # preserving metadata that does not relate directly to the state of
+            # the database
             sql = 'delete from {0}.flock where key = \'{1}\' and function = \'inserted_slice\';'.format(
-                self.schema.name,self.name)
+                self.schema.name, self.name)
         else:
             sql = 'delete from {0}.flock where key = \'{1}\';'.format(
-                self.schema.name,self.name)
+                self.schema.name, self.name)
         self.schema.execute(sql)
         return self.schema.execute('drop table {0}'.format(self.full_name))
 
@@ -261,9 +262,8 @@ class Table(object):
         if self.table_exists():
             self.clean_database(deep=True)
         self.schema.execute('delete from {0}.flock where key = \'{1}\';'.format(
-                self.schema.name,self.name))
+            self.schema.name, self.name))
         self.clean_slice_data()
-
 
     @operation
     def grant(self):
@@ -379,8 +379,6 @@ class Table(object):
                        mapper=self.mapper(), encoding=encoding)
 
         return report
-
-
 
 
 class Transaction:

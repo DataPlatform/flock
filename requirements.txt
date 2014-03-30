@@ -5,3 +5,4 @@ pycrypto==2.6
 chardet
 requests
 readline
+nose

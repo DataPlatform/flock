@@ -22,7 +22,7 @@ except ImportError:
 from flock.tools.csv_to_ddl import csv_to_ddl
 
 from psycopg2 import IntegrityError, ProgrammingError, DataError
-from flock.parsers import optional_named_db_parser, schema_parser, optional_tables_parser
+from flock.parsers import optional_named_environment_parser, schema_parser, optional_tables_parser
 import argparse
 from argparse import RawTextHelpFormatter
 
@@ -42,7 +42,7 @@ class Schema(object):
             prog='python schema.py',
             description='Set off all operations specific to this schema',
             formatter_class=RawTextHelpFormatter,
-            parents=[optional_named_db_parser, schema_parser]
+            parents=[optional_named_environment_parser, schema_parser]
         )
 
         subparsers = parser.add_subparsers(
@@ -85,11 +85,11 @@ class Schema(object):
         self.name = os.path.split(self.settings.SCHEMA_NAME)[1]
 
         # Init the database name early so we can test which environment we are
-        if args.db_name:
-            self.db_name = args.db_name
+        if args.environment_name:
+            self.environment_name = args.environment_name
         else:
             assert self.settings.ENVIRONMENT
-            self.db_name = self.settings.ENVIRONMENT
+            self.environment_name = self.settings.ENVIRONMENT
 
         # set up logging
         if self.settings.LOG_TO_EMAIL:
@@ -98,12 +98,12 @@ class Schema(object):
                 self.settings.SMTP_SERVER,
                 self.settings.OWNER_EMAIL,
                 self.settings.LOG_DIST_LIST,
-                "Flock log for {0} in {1}".format(self.name, self.db_name)
+                "Flock log for {0} in {1}".format(self.name, self.environment_name)
             ]
         else:
             smtp_args = None
 
-        log_directory = os.path.join(self.settings.LOG_DIRECTORY, self.db_name)
+        log_directory = os.path.join(self.settings.LOG_DIRECTORY, self.environment_name)
         if not os.path.exists(log_directory):
             os.makedirs(log_directory)
         log_filename = os.path.join(
@@ -313,9 +313,9 @@ class Schema(object):
     def clean_database(self):
         "Cleans everything under the schema in the active database. Use with caution!"
 
-        if raw_input("Are you sure you want to delete everything in schema {0} on database {1}? (N/y) ".format(self.name, self.db_name)) in ('y', 'Y'):
+        if raw_input("Are you sure you want to delete everything in schema {0} on database {1}? (N/y) ".format(self.name, self.environment_name)) in ('y', 'Y'):
             self.logger.info(
-                "Cleaning schema {0} on database {1}".format(self.name, self.db_name))
+                "Cleaning schema {0} on database {1}".format(self.name, self.environment_name))
             with self.transaction():
                 self.execute("drop schema {schema.name} cascade;")
                 self._init_schema_with_db()

@@ -40,7 +40,7 @@ class TestInitializationWithPostgres(unittest.TestCase):
     def test_init(self):
         """ Test we can initialize an app that does nothing at all"""
 
-        self.assertEqual(self.app.name, 'test')
+        self.assertEqual(self.app.name, 'tests')
 
     def test_command(self):
         """ Test we can initialize an app that does nothing at all"""
