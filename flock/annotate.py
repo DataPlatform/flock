@@ -5,6 +5,8 @@ import inspect
 import traceback
 import logging
 
+logger = logging.getLogger('flock.pre_init')
+
 
 def log_func(func, func_type, log_level):
 
@@ -87,8 +89,8 @@ def flock(application_class):
     # Make a new method to replace the current __init__ that links the chain
     def new_init(self, *args, **kwargs):
 
-        application_class.logger.info(
-            "Initialixing {0}".format(application_class.__name__))
+        logger.info(
+            "Initializing {0}".format(application_class.__name__))
 
         # Do top level application initialization
         if this_init:
@@ -100,8 +102,8 @@ def flock(application_class):
 
             component_init = getattr(component_class, '__init__', None)
             if component_init:
-                application_class.logger.debug(
-                    "Initialixing {0}".format(component_class.__name__))
+                logger.debug(
+                    "Initializing {0}".format(component_class.__name__))
                 component_init(self, *args, **kwargs)
 
     # Swap in the new method

@@ -90,7 +90,7 @@ json.dumps(dt.datetime.now(), default=dthandler)
 
 
 class Driver(object):
-    def __init__(self,settings):
+    def __init__(self):
         assert self.settings
         # set up db connection
 
@@ -107,6 +107,6 @@ class Driver(object):
 
 
 class Pipeline(object):
-    def __init__(self,settings):
+    def __init__(self):
         assert self.settings
 

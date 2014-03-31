@@ -6,6 +6,7 @@ from flock.table import Table
 from flock.global_metadata.file import Metadata
 from flock.db.postgres import Pipeline
 from flock.db.postgres import Driver as PGDriver
+from flock.annotate import flock
 import settings
 
 
@@ -20,8 +21,8 @@ class MySchema(Schema, PGDriver):
     def hydrate_schema(self):
         pass
 
-
-class PGApp(MySchema, Pipeline, PGDriver, Metadata):
+@flock
+class PGFlockApp(MySchema, Pipeline, PGDriver, Metadata):
 
     settings = settings
 
@@ -35,7 +36,7 @@ class TestInitializationWithPostgres(unittest.TestCase):
 
     def setUp(self):
         sys.argv = ['init.py', 'test']
-        self.app = PGApp()
+        self.app = PGFlockApp()
 
     def test_init(self):
         """ Test we can initialize an app that does nothing at all"""
@@ -45,7 +46,7 @@ class TestInitializationWithPostgres(unittest.TestCase):
     def test_command(self):
         """ Test we can initialize an app that does nothing at all"""
 
-        app = PGApp()
+        app = PGFlockApp()
         app.enter()
 
 # class TestInitializationWithAlchemy(unittest.TestCase):
