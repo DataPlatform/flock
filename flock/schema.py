@@ -253,25 +253,7 @@ class Schema(object):
         self.db.commit()
         self.logger.debug('Committing database transaction')
 
-    @operation
-    def set_database_specific_metadata(self, key, function, data):
-        sql_template = "insert into {0}.flock (key,function,data) VALUES (%s,%s,%s)".format(
-            self.name)
-        self.execute(sql_template, [key, function, CustomJson(data)])
 
-    @operation
-    def get_database_specific_metadata(self, key, function):
-        sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(
-            self.name)
-        return self.selectone(sql_template, [key, function])
-
-    @operation
-    def query_database_specific_metadata(self, key, function):
-        sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(
-            self.name)
-        c = self.execute(sql_template, [key, function])
-        data = [row[0] for row in c.fetchall()]
-        return data
 
     # Operations
 

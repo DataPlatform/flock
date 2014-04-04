@@ -6,22 +6,28 @@ import os
 import os.path
 import shutil
 import json
-from flock.schema import FlockSchema, FlockTable, command, operation, test
+from flock.schema import Schema
+from flock.table import Table
+from flock.annotate import command, operation, test, flock
+from flock.db.postgres import Pipeline, Driver
+from flock.global_metadata.file import Metadata
 from datetime import datetime, date, timedelta
 from psycopg2 import IntegrityError, ProgrammingError, DataError
 from flock.tools.csv_to_ddl import csv_to_ddl
 # Schema specific
 from fdps import get_fdps_slice
 
+import settings
 
-class Schema(FlockSchema):
+@flock
+class App(Schema, Pipeline, Driver, Metadata):
 
     """
         A module to curate FDPS data exports
     """
     # Required (Importing here leaves a reference to the module as an
     # attribute)
-    import settings
+    settings = settings
 
     @operation
     def download_new_data(self, procurements):
@@ -121,5 +127,5 @@ class Schema(FlockSchema):
         return self.is_healthy()
 
 if __name__ == '__main__':
-    schema = Schema()
-    schema.enter()
+    app = App()
+    app.enter()

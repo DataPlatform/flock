@@ -6,7 +6,7 @@ import json
 import datetime as dt
 from collections import OrderedDict
 from functools import partial
-
+from flock.annotate import operation
 db_parser = argparse.ArgumentParser(add_help=False)
 db_parser.add_argument("db_uri", help="Database URI", type=str)
 
@@ -105,7 +105,25 @@ class Driver(object):
         if self.db and not self._schema_exists():
             with self.transaction() as transaction:
                 self._init_schema_with_db()
+    @operation
+    def set_database_specific_metadata(self, key, function, data):
+        sql_template = "insert into {0}.flock (key,function,data) VALUES (%s,%s,%s)".format(
+            self.name)
+        self.execute(sql_template, [key, function, CustomJson(data)])
 
+    @operation
+    def get_database_specific_metadata(self, key, function):
+        sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(
+            self.name)
+        return self.selectone(sql_template, [key, function])
+
+    @operation
+    def query_database_specific_metadata(self, key, function):
+        sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(
+            self.name)
+        c = self.execute(sql_template, [key, function])
+        data = [row[0] for row in c.fetchall()]
+        return data
 
 class Pipeline(object):
     def __init__(self):

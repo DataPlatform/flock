@@ -5,17 +5,16 @@ import os
 SCHEMA_ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 SCHEMA_NAME = os.path.basename(SCHEMA_ROOT_DIRECTORY)
 # *Required Settings*
+_db_username = os.environ.get('USER','flock')
 
 # Set these environment variables in flock/schemas/fdps/private
 # and `source flock/init.sh` to pull them into your environment
 
 DATABASES = {
-    'dev': os.environ['FPDS_DEV_DB_URI'],
-    'test': os.environ['FPDS_TEST_DB_URI'],
-    'prod': os.environ['FPDS_PROD_DB_URI']
+    'test': os.environ.get('FPDS_TEST_DB_URI','postgres://{0}:@localhost/flock_test'.format(_db_username)),
 }
 
-DEFAULT_DATABASE = 'dev'
+ENVIRONMENT = DEFAULT_DATABASE = 'test'
 
 # Data structure for holding permissions that should be applied to all tables
 #  - Given in the form dict(permission=['user2','user2']) where permission is something that may GRANTed on a table
@@ -33,8 +32,8 @@ for users in DATABASE_PERMISSIONS.itervalues():
         DATABASE_USERS.add(user)
 
 
-LOG_DIRECTORY = os.path.join(os.environ['FLOCK_LOG_DIR'], SCHEMA_NAME)
-DATA_DIRECTORY = os.path.join(os.environ['FLOCK_DATA_DIR'], SCHEMA_NAME)
+LOG_DIRECTORY = os.path.join(os.environ.get('FLOCK_LOG_DIR','.log'), SCHEMA_NAME)
+DATA_DIRECTORY = os.path.join(os.environ.get('FLOCK_DATA_DIR','.data'), SCHEMA_NAME)
 
 
 # *Custom settings*

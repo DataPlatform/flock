@@ -37,3 +37,6 @@ data
 .vagrant/
 
 .DS_Store
+
+.log
+.data
