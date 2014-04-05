@@ -3,6 +3,7 @@ import os
 import argparse
 import psycopg2
 import glob
+import contextlib
 from psycopg2.extras import Json, register_json
 import json
 import datetime as dt
@@ -111,8 +112,33 @@ class Driver(object):
             with self.transaction() as transaction:
                 self._init_schema_with_db()
 
+
+    @contextlib.contextmanager
+    def transaction(self):
+        """
+            Use this to open and close tranactions. The yielded Transaction 
+            object has an interface for managing savepoints. 
+        """
+        if not self.transaction_open:
+            try:
+                self.logger.debug("Opening database transction")
+                self.transaction_is_open = True
+                yield Transaction(self)
+            except Exception as e:
+                self.db.rollback()
+                self.logger.error(
+                    'Database transaction rolled back. \n{0}'.format(traceback.format_exc()))
+                raise e
+        else:
+            self.logger.error("Transaction is already open.")
+            raise Exception("Transactions cannot be opened twice")
+
+        self.transaction_is_open = False
+        self.db.commit()
+        self.logger.debug('Committing database transaction')
+
     # Database helpers
-    
+
     def execute(self, sql, *args, **kwargs):
         """
             Does some string formatting before calling cursor.execute. 
@@ -197,6 +223,27 @@ class Driver(object):
             self.logger.info(
                 "Running pipeline step {0}: {1}".format(i, step_name))
             self.execute(open(step).read())
+
+
+class Transaction:
+
+    "For managing savepoints inside Postgres transactions"
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def savepoint(self):
+        "Sets a savepoint"
+        id = self.driver.uuid('sp')
+        self.driver.execute('SAVEPOINT {0};'.format(id))
+        self.driver.logger.debug('Setting database savepoint {0}'.format(id))
+        return id
+
+    def return_to_savepoint(self, id):
+        "Returns to the specified savepoint"
+        self.driver.logger.warn(
+            'Returning to database savepoint {0}'.format(id))
+        self.driver.execute('ROLLBACK TO SAVEPOINT {0};'.format(id))
 
 class Pipeline(object):
 
