@@ -109,29 +109,15 @@ class Schema(object):
             'schema.' + self.name, log_filename, smtp_args=smtp_args)
         self.logger.info('Logging online {0}'.format(self.name))
 
-        # establish schema folder
-
+        # Establish schema folder
         self.schema_dir = self.settings.SCHEMA_NAME
 
-        # if not os.path.exists(self.schema_dir):
-        #     if raw_input('Schema {0} does not exist. Do you want to create it? [y/N]:'.format(self.schema_dir)) in ('y', 'Y'):
-        #         os.makedirs(self.schema_dir)
-        #         open(os.path.join(self.schema_dir, '.generated'), 'w').write(
-        #             'Code generation in play. Look out and use scm!')
-        #     else:
-        #         exit()
-        #     for d in ['definitions', 'pipelines', 'access']:
-        #         os.mkdir(os.path.join(self.schema_dir, d))
 
-        # get list of targeted tables
-        # - targeted tables are a reaction to the constant desire to pass a table name
-        #   around with the schema class which should definitely be avoided
-        # - there is room for improvement here
-
+        # Check for table list in CL args
         if args.tables:
             self.settings.TABLES = args.tables
 
-        # set up tables
+        # Instantiate tables
         self.tables = OrderedDict(((table_name, self.TableClass(table_name, self))
                                   for table_name in self.settings.TABLES))
 
@@ -155,52 +141,7 @@ class Schema(object):
     def uuid(self, slug):
         return slug + str(uuid.uuid4()).replace('-', '')
 
-    # Database helpers
-    def execute(self, sql, *args, **kwargs):
-        """
-            Does some string formatting before calling cursor.execute. 
-        """
-        cursor = self.db.cursor()
-        sql = sql.format(*args, schema=self, **kwargs)
-        sql_log_msg = 'Running sql `{0}` (clipped at 200 chars)'.format(
-            ' '.join(sql.split())[:200])
-        self.logger.debug(sql_log_msg)
-        cursor.execute(sql, *args)
-        return cursor
 
-    def selectone(self, sql, *args, **kwargs):
-        " Convenience method for queries that return one value"
-        assert sql.strip().lower().startswith('select')
-        cursor = self.db.cursor()
-        cursor.execute(sql, *args, **kwargs)
-        answer = cursor.fetchone()
-        if answer != None:
-            answer = answer[0]
-        sql_log_msg = 'Statement is {0} `{1}` (clipped at 200 chars)'.format(
-            answer, ' '.join(cursor.query.split())[:200])
-        self.logger.debug(sql_log_msg)
-        return answer
-
-    def _schema_exists(self):
-        "Test if this schema exists in the active database"
-        return self.selectone(
-            'select (SELECT count(*) FROM information_schema.schemata WHERE schema_name =%(name)s) > 0;',
-            dict(name=self.name)
-        )
-
-    def _init_schema_with_db(self):
-        "Activate database with this schema"
-        assert self.db
-        self.execute('create schema {schema.name};')
-        self.execute('grant usage on schema {schema.name} to {users}',
-                     **dict(users=','.join(self.settings.DATABASE_USERS)))
-        self.execute('''CREATE table {schema.name}.flock (
-                            id serial PRIMARY KEY,
-                            time timestamp default current_timestamp,
-                            key text,
-                            function text,
-                            data json
-             );''')
 
     @contextlib.contextmanager
     def transaction(self):

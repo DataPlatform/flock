@@ -41,3 +41,20 @@ class Metadata(object):
 
     def metadata_keys(self):
         return self.metadata.iterkeys()
+
+
+    def get_mapper(self, md_key):
+        "Returns a function that maps unstandardized fieldnames to standardized ones"
+
+        print 'Attempting to find metadata for key:', md_key
+        if md_key in self.metadata:
+            # A mapping is configured for this key
+            fieldmap = self.metadata[md_key]
+            assert type(fieldmap) == OrderedDict
+            mapper = lambda x: fieldmap[x]
+            # self.logger.debug("*Using the following field mappings*")
+            # for k,v in fieldmap.iteritems():
+            #     self.logger.debug('{0}: {1}'.format(k,v))
+        else:
+            mapper = lambda x: x
+        return mapper
