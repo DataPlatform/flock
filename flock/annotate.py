@@ -4,6 +4,7 @@ from datetime import datetime
 import inspect
 import traceback
 import logging
+from flock.exceptions import *
 
 logger = logging.getLogger('flock.pre_init')
 
@@ -78,12 +79,19 @@ def test(test):
 
 
 def flock(application_class):
-    """ Wraps a flock application."""
+    """ Wraps a flock application. Does two things:
+     - When using mixins not all __init__ methods are called: This changes 
+       that behavior to ensure that all __init__methods are called.
+     - Checks for conflicts on class methods annotated as operations.
 
-    # When using mixins not all __init__ methods are called.
-    # This changes that behavior to ensure that all __init__methods are called.
+    """
 
-    # Get the __init__ method for te decorated class
+
+
+
+
+
+    # Get the __init__ method for the decorated class
     this_init = getattr(application_class, '__init__', None)
 
     # Make a new method to replace the current __init__ that links the chain
@@ -91,6 +99,38 @@ def flock(application_class):
 
         logger.info(
             "Initializing {0}".format(application_class.__name__))
+
+
+        # In the absence of having interfaces, we should at least check for
+        # conflicts among operations
+
+        # Keys are method names and values are the name of the class that provides
+        # the method
+        all_methods = dict()
+
+        # iterate through base classes, reversed so it is easy to see what is
+        # being overridden
+
+        interface_errors = False
+
+        for cls in reversed(application_class.__bases__):
+            # all attributes
+            for name in dir(cls):
+                attr = getattr(cls, name)
+
+                # check that the method and that it has been annotated as an
+                # @operation
+                if inspect.ismethod(attr) and 'operation' in attr.im_func.__dict__:
+
+                    if name in all_methods:
+                        application_class.logger.error("Operation {0}() defined in {1} is being overridden by {2}".format(
+                            name, all_methods[name], cls.__name__))
+                        interface_errors = True
+                    all_methods[name] = cls.__name__
+
+        if interface_errors:
+
+            raise InterfaceConflict()
 
         # Do top level application initialization
         if this_init:
@@ -106,30 +146,11 @@ def flock(application_class):
                     "Initializing {0}".format(component_class.__name__))
                 component_init(self, *args, **kwargs)
 
+
+
     # Swap in the new method
     setattr(application_class, '__init__', new_init)
 
-    # In the absence of having interfaces, we should at least check for
-    # conflicts among operations
 
-    # Keys are method names and values are the name of the class that provides
-    # the method
-    all_methods = dict()
-
-    # iterate through base classes, reversed so it is easy to see what is
-    # being overridden
-    for cls in reversed(application_class.__bases__):
-        # all attributes
-        for name in dir(cls):
-            attr = getattr(cls, name)
-
-            # check that the method and that it has been annotated as an
-            # @operation
-            if inspect.ismethod(attr) and 'operation' in attr.im_func.__dict__:
-
-                if name in all_methods:
-                    application_class.logger.info("Operation {0}() defined in {1} is being overridden by {2}".format(
-                        name, all_methods[name], cls.__name__))
-                all_methods[name] = cls.__name__
 
     return application_class

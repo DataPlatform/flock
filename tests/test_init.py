@@ -8,6 +8,7 @@ from flock.global_metadata.file import Metadata
 from flock.db.postgres import Pipeline
 from flock.db.postgres import Driver as PGDriver
 from flock.annotate import flock,command, operation
+from flock.exceptions import *
 import settings
 
 
@@ -31,7 +32,7 @@ class PGFlockApp(GoodBaseApp, Schema, PGDriver, Pipeline, Metadata):
     settings = settings
 
     @command
-    def test(self):
+    def main(self):
         return True
 
 
@@ -65,13 +66,6 @@ class TestInitializationWithPostgres(unittest.TestCase):
         app = PGFlockApp()
         app.enter()
 
-
-class TestOperationCollisionChecking(unittest.TestCase):
-    """Checks operation collision detection"""
-
-    def test_op_conflict_checking(self):
-        "not implemented yet"
-        self.assertRaises(Exception,PGFlockApp())
         
 # class TestInitializationWithAlchemy(unittest.TestCase):
 

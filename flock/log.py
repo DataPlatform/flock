@@ -66,7 +66,7 @@ def get_logger(name, log_filename, smtp_args=None, smtp_kwargs=None):
 
     # Second handler writes to stderr
     console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
+    console.setLevel(logging.INFO)
     console.setFormatter(simple_formatter)
     logger = logging.getLogger(name)
     logger.addHandler(console)
