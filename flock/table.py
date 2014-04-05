@@ -224,13 +224,13 @@ class Table(object):
         return [row[0] for row in cursor.fetchall()]
 
     def get_metadata(self, function):
-        return self.schema.get_database_specific_metadata(self.name, function)
+        return self.schema.get_database_journal(self.name, function)
 
     def query_metadata(self, function):
-        return self.schema.query_database_specific_metadata(self.name, function)
+        return self.schema.query_database_journal(self.name, function)
 
     def set_metadata(self, function, data):
-        return self.schema.set_database_specific_metadata(self.name, function, data)
+        return self.schema.set_database_journal(self.name, function, data)
 
     def table_exists(self):
         return self.schema.selectone("""SELECT (SELECT count(*) FROM information_schema.tables 

@@ -1,6 +1,7 @@
 import json
 import os
 from collections import OrderedDict,defaultdict
+
 class Metadata(object):
 
     def __init__(self):
@@ -22,3 +23,21 @@ class Metadata(object):
             self.metadata = defaultdict(dict, data)
         else:
             self.metadata = defaultdict(dict)
+
+    def export_metadata(self):
+        """
+            Only call after successful operations
+        """
+        self.logger.info('Exporting metadata to' + self.metadatafile_path)
+        open(self.metadatafile_path, 'w').write(
+            json.dumps(self.metadata, indent=2))
+
+    def set_metadata(self, key, value):
+        assert json.dumps(value)
+        self.metadata[key] = value
+
+    def get_metadata(self, key, value):
+        return self.metadata[value]
+
+    def metadata_keys(self):
+        return self.metadata.iterkeys()

@@ -138,13 +138,7 @@ class Schema(object):
         self.tables = OrderedDict(((table_name, self.TableClass(table_name, self))
                                   for table_name in self.settings.TABLES))
 
-    def export_metadata(self):
-        """
-            Only call after successful operations
-        """
-        self.logger.info('Exporting metadata to' + self.metadatafile_path)
-        open(self.metadatafile_path, 'w').write(
-            json.dumps(self.metadata, indent=2))
+
 
     def get_path(self, function, *args):
         """
@@ -156,25 +150,7 @@ class Schema(object):
         else:
             return override
 
-    def get_mapper(self, md_key):
-        "Returns a function that maps unstandardized fieldnames to standardized ones"
 
-        print 'Attempting to find metadata for key:', md_key
-        if md_key in self.metadata:
-            # A mapping is configured for this key
-            fieldmap = self.metadata[md_key]
-            assert type(fieldmap) == OrderedDict
-            mapper = lambda x: fieldmap[x]
-            # self.logger.debug("*Using the following field mappings*")
-            # for k,v in fieldmap.iteritems():
-            #     self.logger.debug('{0}: {1}'.format(k,v))
-        else:
-            mapper = lambda x: x
-        return mapper
-
-    def set_metadata(self, key, value):
-        assert json.dumps(value)
-        self.metadata[key] = value
 
     def log_traceback(self):
         self.logger.error('\n{0}'.format(traceback.format_exc()))
