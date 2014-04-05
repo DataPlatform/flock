@@ -6,7 +6,7 @@ import os
 import os.path
 import shutil
 import json
-from flock.schema import Schema
+from flock.app import BaseApp
 from flock.table import Table
 from flock.annotate import command, operation, test, flock
 from flock.db.postgres import Pipeline, Driver
@@ -20,7 +20,7 @@ from fdps import get_fdps_slice
 import settings
 
 @flock
-class App(Schema, Pipeline, Driver, Metadata):
+class App(BaseApp, Pipeline, Driver, Metadata):
 
     """
         A module to curate FDPS data exports
@@ -127,5 +127,5 @@ class App(Schema, Pipeline, Driver, Metadata):
         return self.is_healthy()
 
 if __name__ == '__main__':
-    app = App()
-    app.enter()
+    with App() as app:
+        app.enter()

@@ -58,3 +58,14 @@ class Metadata(object):
         else:
             mapper = lambda x: x
         return mapper
+
+
+
+
+    # Todo: find a better way of persisting!
+
+    def __exit__(self, type, value, traceback):
+        self.export_metadata()
+
+    def __enter__(self):
+        return self        

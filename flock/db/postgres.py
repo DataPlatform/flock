@@ -9,7 +9,7 @@ import json
 import datetime as dt
 from collections import OrderedDict
 from functools import partial
-from flock.annotate import operation
+from ..annotate import operation
 
 
 db_parser = argparse.ArgumentParser(add_help=False)

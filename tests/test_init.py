@@ -1,6 +1,7 @@
 import unittest
 import sys
 sys.path.append('../')
+from flock.app import BaseApp
 from flock.schema import Schema
 from flock.table import Table
 from flock.global_metadata.file import Metadata
@@ -10,14 +11,14 @@ from flock.annotate import flock,command, operation
 import settings
 
 
-class MySchema(Schema):
+class GoodBaseApp(BaseApp):
 
     @operation
     def hydrate_schema(self):
         pass
 
 
-class BadSchema(Schema):
+class BadBaseApp(BaseApp):
     """Implements an operation belonging to the Metadata component"""
     @operation
     def get_metadata(self):
@@ -25,7 +26,7 @@ class BadSchema(Schema):
 
 
 @flock
-class PGFlockApp(MySchema, Pipeline, PGDriver, Metadata):
+class PGFlockApp(GoodBaseApp, Schema, PGDriver, Pipeline, Metadata):
 
     settings = settings
 
@@ -36,13 +37,13 @@ class PGFlockApp(MySchema, Pipeline, PGDriver, Metadata):
 
 
 @flock
-class OpConflictApp(BadSchema, Metadata):
+class OpConflictApp(BadBaseApp, Metadata):
 
     settings = settings
 
 
 
-# class AlchemyApp(MySchema, Pipeline, AlchemyDriver):
+# class AlchemyApp(MyBaseApp, Pipeline, AlchemyDriver):
 
 #     settings = settings
 
