@@ -6,25 +6,22 @@ import glob
 import json
 import contextlib
 import re
+from collections import OrderedDict
 from collections import defaultdict
-# from psycopg2.extras import Json
 
-from flock.tools.csv_import import csv_import
+from psycopg2 import IntegrityError, ProgrammingError, DataError
+import argparse
+from argparse import RawTextHelpFormatter
+
+from .exceptions import *
+from .parsers import optional_named_environment_parser, schema_parser, optional_tables_parser
+from .tools.csv_import import csv_import
+from .tools.csv_to_ddl import csv_to_ddl
 from .annotate import operation, command, test
 from .log import get_logger
 from .fancycsv import FancyReader, UnicodeWriter
-from .error import *
 from .table import Table
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-from flock.tools.csv_to_ddl import csv_to_ddl
 
-from psycopg2 import IntegrityError, ProgrammingError, DataError
-from flock.parsers import optional_named_environment_parser, schema_parser, optional_tables_parser
-import argparse
-from argparse import RawTextHelpFormatter
 
 
 class Schema(object):
@@ -231,23 +228,8 @@ class Schema(object):
 
 
 
-    # Operations
 
-    @operation
-    def run_pipeline(self, pipeline):
-        "Runs the specified pipeline"
-        path = os.path.join(self.schema_dir, 'pipelines', pipeline)
-        if os.path.isdir(path):
-            steps = glob.glob(os.path.join(path, "*"))
-        else:
-            steps = [path]
-        for i, step in enumerate(steps):
-            step_name = os.path.basename(step)
-            self.logger.info(
-                "Running pipeline step {0}: {1}".format(i, step_name))
-            self.execute(open(step).read())
-
-    # Commands
+    # Default Commands
     @command
     def shell(self):
         "Initialize Schema and drop into an IPython shell"
@@ -292,6 +274,9 @@ class Schema(object):
         for test in self._get_annotated_methods('test'):
             test(self)
 
+    @command
+    def main(self):
+        raise NotImplementedError
     # Internal
 
     def _get_annotated_methods(self, annotation):
@@ -305,10 +290,12 @@ class Schema(object):
 
     # Entry Points
     def enter(self):
-        "Introspection to discover registered commands and present a"
-
-        # Retrieve and call the command
-        getattr(self, self.args.command)()
+        "Run the command given in the CLI"
+        if self.args.command:
+            # Retrieve and call the command
+            getattr(self, self.args.command)()
+        else:
+            self.main()
 
 # Dont call it a factory!
 

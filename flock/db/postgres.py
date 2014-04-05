@@ -1,12 +1,16 @@
 import sys
+import os
 import argparse
 import psycopg2
+import glob
 from psycopg2.extras import Json, register_json
 import json
 import datetime as dt
 from collections import OrderedDict
 from functools import partial
 from flock.annotate import operation
+
+
 db_parser = argparse.ArgumentParser(add_help=False)
 db_parser.add_argument("db_uri", help="Database URI", type=str)
 
@@ -72,7 +76,7 @@ class CustomJson(Json):
             obj = obj.isoformat()
         return json.dumps(obj)
 
-#todo This is test logic 
+# todo This is test logic
 
 dthandler = lambda obj: obj.isoformat() if isinstance(
     obj, dt.datetime) else None
@@ -90,6 +94,7 @@ json.dumps(dt.datetime.now(), default=dthandler)
 
 
 class Driver(object):
+
     def __init__(self):
         assert self.settings
         # set up db connection
@@ -105,6 +110,12 @@ class Driver(object):
         if self.db and not self._schema_exists():
             with self.transaction() as transaction:
                 self._init_schema_with_db()
+
+
+    # The database journal is a way to store state and structured log
+    # information that is scoped the database (i.e. This info goes away when
+    # the database is swapped out.)
+
     @operation
     def set_database_journal(self, key, function, data):
         sql_template = "insert into {0}.flock (key,function,data) VALUES (%s,%s,%s)".format(
@@ -125,7 +136,21 @@ class Driver(object):
         data = [row[0] for row in c.fetchall()]
         return data
 
+    @operation
+    def run_pipeline(self, pipeline):
+        "Runs the specified pipeline"
+        path = os.path.join(self.schema_dir, 'pipelines', pipeline)
+        if os.path.isdir(path):
+            steps = glob.glob(os.path.join(path, "*"))
+        else:
+            steps = [path]
+        for i, step in enumerate(steps):
+            step_name = os.path.basename(step)
+            self.logger.info(
+                "Running pipeline step {0}: {1}".format(i, step_name))
+            self.execute(open(step).read())
+
 class Pipeline(object):
+
     def __init__(self):
         assert self.settings
-
