@@ -7,9 +7,8 @@ import os.path
 import shutil
 import json
 from flock.app import BaseApp
-from flock.table import Table
 from flock.annotate import command, operation, test, flock
-from flock.db.postgres import Pipeline, Driver
+from flock.db.postgres import Pipeline, Driver, TableManager
 from flock.global_metadata.file import Metadata
 from datetime import datetime, date, timedelta
 from psycopg2 import IntegrityError, ProgrammingError, DataError
@@ -28,6 +27,7 @@ class App(BaseApp, Pipeline, Driver, Metadata):
     # Required (Importing here leaves a reference to the module as an
     # attribute)
     settings = settings
+    InjectedTableClass = TableManager
 
     @operation
     def download_new_data(self, procurements):
