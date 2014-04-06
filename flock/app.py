@@ -110,7 +110,7 @@ class BaseApp(object):
         self.logger.info('Logging online {0}'.format(self.name))
 
         # Establish schema folder
-        self.schema_dir = self.settings.SCHEMA_NAME
+        self.schema_dir = self.settings.SCHEMA_DIRECTORY
 
 
         # Check for table list in CL args

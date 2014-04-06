@@ -22,21 +22,18 @@ pip-log.txt
 #Translations
 *.mo
 
-#Mr Developer
-.mr.developer.cfg
-
-#Custom
-
-private*
-.py
-schemas/*
-log
-data
-.cache
-.log
+# Tools
+.DS_Store
 .vagrant/
 
-.DS_Store
 
-.log
-.data
+# Custom
+.py
+
+
+# Flock
+private
+.flock
+.cache
+
+

@@ -1,9 +1,12 @@
 import os
 
-# Some initializing
+# Required Settings
 
-SCHEMA_ROOT_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
-SCHEMA_NAME = os.path.basename(SCHEMA_ROOT_DIRECTORY)
+SCHEMA_NAME = os.path.basename(os.path.dirname(__file__))
+SCHEMA_ROOT_DIRECTORY = os.path.abspath(os.path.join(os.environ.get('HOME',''),'.flock',SCHEMA_NAME))
+LOG_DIRECTORY = os.environ.get('FLOCK_LOG_DIR',os.path.join(SCHEMA_ROOT_DIRECTORY,'log'))
+DATA_DIRECTORY = os.environ.get('FLOCK_DATA_DIR',os.path.join(SCHEMA_ROOT_DIRECTORY,'data'))
+SCHEMA_DIRECTORY = os.environ.get('FLOCK_SCHEMA_DIR',os.path.join(SCHEMA_ROOT_DIRECTORY,'schema'))
 
 
 _db_username = os.environ.get('USER','flock')
@@ -12,28 +15,24 @@ DATABASES = {
     'test': os.environ.get('FLOCK_TEST_DB_URI','postgres://{0}:@localhost/flock_test'.format(_db_username)),
 }
 
-#Leaving DEFAULT_DATABASE for now so as not to break things. ENVIRONMENT is semantically better
 ENVIRONMENT = DEFAULT_DATABASE = 'test'
 
+# Data structure for holding permissions that should be applied to all tables
+#  - Given in the form dict(permission=['user2','user2']) where permission is something that may GRANTed on a table
+#  - See: http://www.postgresql.org/docs/9.2/static/sql-grant.html
+#  - More granular permission strategies should be maintained manually
+
 DATABASE_PERMISSIONS = {
+	# example syntax, this is implied
     'all': [_db_username]
 }
 
 # Mainly for granting schema usage: Take set users from permissions above.
+
 DATABASE_USERS = set()
 for users in DATABASE_PERMISSIONS.itervalues():
     for user in users:
         DATABASE_USERS.add(user)
-
-
-LOG_DIRECTORY = os.path.join(os.environ.get('FLOCK_LOG_DIR','.log'), SCHEMA_NAME)
-DATA_DIRECTORY = os.path.join(os.environ.get('FLOCK_DATA_DIR','.data'), SCHEMA_NAME)
-
-
-# *Custom settings*
-
-# This dataset has only one table
-TABLES = ['procurements']
 
 
 LOG_TO_EMAIL = 'FLOCK_SMTP_SERVER' in os.environ
@@ -43,3 +42,5 @@ if LOG_TO_EMAIL:
     OWNER_EMAIL = os.environ['FLOCK_EMAIL']
     SMTP_SERVER = os.environ['FLOCK_SMTP_SERVER']
     LOG_DIST_LIST = [OWNER_EMAIL]
+
+TABLES = []

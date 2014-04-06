@@ -111,7 +111,7 @@ class App(BaseApp, Pipeline, Driver, Metadata):
         if os.path.exists('.cache'):
             for filename in os.listdir('.cache'):
                 os.remove(os.path.join('.cache', filename))
-        super(Schema, self).clean()
+        super(App, self).clean()
 
     @test
     def bootstrap_test(self):
