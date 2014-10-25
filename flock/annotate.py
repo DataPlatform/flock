@@ -111,7 +111,7 @@ def flock(application_class):
 
         interface_errors = False
 
-        for cls in reversed(application_class.__bases__):
+        for cls in application_class.__bases__:
             # all attributes
             for name in dir(cls):
                 attr = getattr(cls, name)
@@ -130,10 +130,6 @@ def flock(application_class):
         if interface_errors:
             raise InterfaceConflict()
 
-        # Do top level application initialization
-        if this_init:
-            this_init(self, *args, **kwargs)
-
         # Iterate through each component of the application and perform
         # __init__
         for component_class in application_class.__bases__[:]:
@@ -143,6 +139,11 @@ def flock(application_class):
                 logger.debug(
                     "Initializing {0}".format(component_class.__name__))
                 component_init(self, *args, **kwargs)
+
+
+        # Do top level application initialization
+        if this_init:
+            this_init(self, *args, **kwargs)
 
 
     # Swap in the new method

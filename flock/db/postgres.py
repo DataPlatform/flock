@@ -101,6 +101,10 @@ json.dumps(dt.datetime.now(), default=dthandler)
 
 
 class Driver(object):
+    """
+        Flock component that implements interactions with the database
+
+    """
     def __init__(self):
         assert self.settings
         # set up db connection
@@ -220,12 +224,13 @@ class Driver(object):
 
 
 class Transaction:
-    """For managing savepoints inside Postgres transactions"""
+    """
+        For managing savepoints inside Postgres transactions
+    """
 
     def __init__(self, driver):
         self.driver = driver
 
-    @operation
     def savepoint(self):
         """Sets a savepoint"""
         id = self.driver.uuid('sp')
@@ -233,7 +238,6 @@ class Transaction:
         self.driver.logger.debug('Setting database savepoint {0}'.format(id))
         return id
 
-    @operation
     def return_to_savepoint(self, id):
         """Returns to the specified savepoint"""
         self.driver.logger.warn(
@@ -242,6 +246,11 @@ class Transaction:
 
 
 class Pipeline(object):
+    """
+        Flock component for running sql pipelines
+
+    """
+
     def __init__(self):
         assert self.settings
 
@@ -263,7 +272,7 @@ class Pipeline(object):
 class CSVTable(object):
     def __init__(self, table_name, flock_app):
         """
-            For table specific ops
+            Implements table functionality for CSV based data
         """
         self.name = table_name
         self.database_table_name = table_name.lower()
@@ -537,7 +546,7 @@ class CSVTable(object):
         self.clean_data()
 
     @operation
-    def grant(self):
+    def grant_permissions(self):
         for privilege, users in self.flock.settings.DATABASE_PERMISSIONS.iteritems():
             self.flock.execute('grant {privilege} on {full_name} to {users}', **dict(
                 users=','.join(users),

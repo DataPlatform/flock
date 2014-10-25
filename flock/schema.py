@@ -1,3 +1,5 @@
 class Schema(object):
-    """Schema management logic lives here. Migrations, etc."""
+    """
+        Schema management logic could live here. Migrations, etc.
+    """
     pass

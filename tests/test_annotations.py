@@ -5,7 +5,7 @@ sys.path.append('../')
 from flock.annotate import flock, operation
 from flock.exceptions import *
 
-# Need a global to accumulate as we cannot retun data from __init__
+# Need a global to accumulate as we cannot return data from __init__
 
 # Logging
 logger = logging.getLogger('flock.tests')

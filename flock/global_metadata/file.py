@@ -5,6 +5,11 @@ from flock.annotate import operation
 
 
 class Metadata(object):
+    """
+        Flock component that implements a file based metadata store.
+        (This is a separate solution from he database journal in the Driver component)
+    """
+
     def __init__(self):
         # set up file based metadata
 

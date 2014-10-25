@@ -1,9 +1,10 @@
 import os
-from flock.defaults import *
+import sys
+import inspect
 
 # Required Settings
 
-SCHEMA_NAME = os.path.basename(os.path.dirname(__file__))
+SCHEMA_NAME = os.path.basename(os.path.basename(os.getcwd()))
 SCHEMA_ROOT_DIRECTORY = os.path.abspath(os.path.join(os.environ.get('HOME',''),'.flock',SCHEMA_NAME))
 LOG_DIRECTORY = os.environ.get('FLOCK_LOG_DIR',os.path.join(SCHEMA_ROOT_DIRECTORY,'log'))
 DATA_DIRECTORY = os.environ.get('FLOCK_DATA_DIR',os.path.join(SCHEMA_ROOT_DIRECTORY,'data'))
@@ -44,3 +45,7 @@ if LOG_TO_EMAIL:
     SMTP_SERVER = os.environ['FLOCK_SMTP_SERVER']
     LOG_DIST_LIST = [OWNER_EMAIL]
 
+
+for name, obj in inspect.getmembers(sys.modules[__name__]):
+    if not name.startswith('_') and name.isupper():
+        print 'default setting for',name,obj

@@ -25,8 +25,7 @@ from .table import Table
 
 class BaseApp(object):
     """
-        Class to structure interactions with schema definitions and data import workflows.
-        i.e. Layer all the file management and some db operations
+        Base flock component: Defines default init logic and some generic commands
 
     """
 
