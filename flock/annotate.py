@@ -90,7 +90,11 @@ def flock(application_class):
 
 
     # Get the __init__ method for the decorated class
-    this_init = getattr(application_class, '__init__', None)
+    if '__init__' in vars(application_class):
+        #__init__ is defined on application_class, catch it so we can run it last
+        this_init = getattr(application_class, '__init__', None)
+    else:
+        this_init = None
 
     # Make a new method to replace the current __init__ that links the chain
     def new_init(self, *args, **kwargs):
@@ -111,7 +115,7 @@ def flock(application_class):
 
         interface_errors = False
 
-        for cls in application_class.__bases__:
+        for cls in reversed(application_class.__bases__):
             # all attributes
             for name in dir(cls):
                 attr = getattr(cls, name)
@@ -130,6 +134,7 @@ def flock(application_class):
         if interface_errors:
             raise InterfaceConflict()
 
+
         # Iterate through each component of the application and perform
         # __init__
         for component_class in application_class.__bases__[:]:
@@ -140,11 +145,9 @@ def flock(application_class):
                     "Initializing {0}".format(component_class.__name__))
                 component_init(self, *args, **kwargs)
 
-
         # Do top level application initialization
         if this_init:
             this_init(self, *args, **kwargs)
-
 
     # Swap in the new method
     setattr(application_class, '__init__', new_init)

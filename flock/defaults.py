@@ -1,6 +1,7 @@
 import os
 import sys
 import inspect
+import logging
 
 # Required Settings
 
@@ -46,6 +47,8 @@ if LOG_TO_EMAIL:
     LOG_DIST_LIST = [OWNER_EMAIL]
 
 
+
+logger = logging.getLogger(__name__)
 for name, obj in inspect.getmembers(sys.modules[__name__]):
     if not name.startswith('_') and name.isupper():
-        print 'default setting for',name,obj
+        logger.info('default setting for {} {}'.format(name,obj))
