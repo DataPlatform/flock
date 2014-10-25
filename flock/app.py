@@ -68,15 +68,6 @@ class BaseApp(object):
         assert self.settings
         assert self.settings.SCHEMA_NAME
 
-        # Assign a custom Table class to InjectedTableClass
-        # in your schema to override or create new functionality
-        try:
-            self.TableClass = self.InjectedTableClass
-        except AttributeError:
-            self.TableClass = Table
-
-        assert self.TableClass
-
         self.name = os.path.split(self.settings.SCHEMA_NAME)[1]
 
         # Init the database name early so we can test which environment we are
@@ -111,13 +102,7 @@ class BaseApp(object):
         self.schema_dir = self.settings.SCHEMA_DIRECTORY
 
 
-        # Check for table list in CL args
-        if args.tables:
-            self.settings.TABLES = args.tables
 
-        # Instantiate tables
-        self.tables = OrderedDict(((table_name, self.TableClass(table_name, self))
-                                   for table_name in self.settings.TABLES))
 
 
     def get_path(self, function, *args):

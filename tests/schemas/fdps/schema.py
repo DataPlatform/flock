@@ -27,7 +27,12 @@ class App(BaseApp, Pipeline, Driver, Metadata):
     # Required (Importing here leaves a reference to the module as an
     # attribute)
     settings = settings
-    InjectedTableClass = CSVTable
+
+    def __init__(self):
+        # Instantiate tables
+        filtered_table_list = [x for x in self.settings.TABLES if x in self.args.tables]
+        self.tables = OrderedDict(((table_name, CSVTable(table_name, self))
+                                   for table_name in filtered_table_list))
 
     @operation
     def download_new_data(self, procurements):
