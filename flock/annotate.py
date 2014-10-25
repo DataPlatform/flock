@@ -10,7 +10,6 @@ logger = logging.getLogger('flock.pre_init')
 
 
 def log_func(func, func_type, log_level):
-
     name = func.func_name
 
     def logged_function(self, *args, **kwargs):
@@ -30,7 +29,7 @@ def log_func(func, func_type, log_level):
                     v = None
 
             report += '{0}:{1} '.format(k, str(v)
-                                        [:100].encode('utf-8').replace('\n', ' '))
+            [:100].encode('utf-8').replace('\n', ' '))
 
         self.logger.log(
             log_level, '@{0} `{1}` Starting with args: {2}'.format(func_type, name, report))
@@ -61,7 +60,6 @@ def operation(op):
 
 
 def test(test):
-
     def logged_test(self, *args, **kwargs):
         name = test.func_name
         ans = test(self, *args, **kwargs)
@@ -123,13 +121,13 @@ def flock(application_class):
                 if inspect.ismethod(attr) and 'operation' in attr.im_func.__dict__:
 
                     if name in all_methods:
-                        application_class.logger.error("Operation {0}() defined in {1} is being overridden by {2}".format(
-                            name, all_methods[name], cls.__name__))
+                        application_class.logger.error(
+                            "Operation {0}() defined in {1} is being overridden by {2}".format(
+                                name, all_methods[name], cls.__name__))
                         interface_errors = True
                     all_methods[name] = cls.__name__
 
         if interface_errors:
-
             raise InterfaceConflict()
 
         # Do top level application initialization
@@ -147,10 +145,7 @@ def flock(application_class):
                 component_init(self, *args, **kwargs)
 
 
-
     # Swap in the new method
     setattr(application_class, '__init__', new_init)
-
-
 
     return application_class

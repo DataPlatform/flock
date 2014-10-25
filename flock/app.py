@@ -23,9 +23,7 @@ from .fancycsv import FancyReader, UnicodeWriter
 from .table import Table
 
 
-
 class BaseApp(object):
-
     """
         Class to structure interactions with schema definitions and data import workflows.
         i.e. Layer all the file management and some db operations
@@ -90,7 +88,7 @@ class BaseApp(object):
 
         # set up logging
         if self.settings.LOG_TO_EMAIL:
-            #mailhost, fromaddr, toaddrs, subject
+            # mailhost, fromaddr, toaddrs, subject
             smtp_args = [
                 self.settings.SMTP_SERVER,
                 self.settings.OWNER_EMAIL,
@@ -119,8 +117,7 @@ class BaseApp(object):
 
         # Instantiate tables
         self.tables = OrderedDict(((table_name, self.TableClass(table_name, self))
-                                  for table_name in self.settings.TABLES))
-
+                                   for table_name in self.settings.TABLES))
 
 
     def get_path(self, function, *args):
@@ -134,7 +131,6 @@ class BaseApp(object):
             return override
 
 
-
     def log_traceback(self):
         self.logger.error('\n{0}'.format(traceback.format_exc()))
 
@@ -142,16 +138,10 @@ class BaseApp(object):
         return slug + str(uuid.uuid4()).replace('-', '')
 
 
-
-
-
-
-
-
     # Default Commands
     @command
     def shell(self):
-        "Initialize Schema and drop into an IPython shell"
+        """Initialize Schema and drop into an IPython shell"""
 
         self.logger.info("Entering interactive shell")
         schema = self
@@ -159,20 +149,25 @@ class BaseApp(object):
         # Make a datastructure fot tables that is tab completion friendly
         class O:
             pass
+
         tables = O()
         for k, v in self.tables.iteritems():
             setattr(tables, k, v)
 
         # Make a shell
         import IPython
+
         IPython.embed()
         self.logger.info("Exiting interactive shell")
 
     @command
     def clean_database(self):
-        "Cleans everything under the schema in the active database. Use with caution!"
+        """Cleans everything under the schema in the active database. Use with caution!"""
 
-        if raw_input("Are you sure you want to delete everything in schema {0} on database {1}? (N/y) ".format(self.name, self.environment_name)) in ('y', 'Y'):
+        if raw_input(
+                "Are you sure you want to delete everything in schema {0}\
+                 on database {1}? (N/y) ".format(
+                        self.name, self.environment_name)) in ('y', 'Y'):
             self.logger.info(
                 "Cleaning schema {0} on database {1}".format(self.name, self.environment_name))
             with self.transaction():
@@ -183,7 +178,7 @@ class BaseApp(object):
 
     @command
     def clean(self):
-        "Delete all data in the database and on the filesystem"
+        """Delete all data in the database and on the filesystem"""
         self.clean_database()
         for table in self.tables.itervalues():
             table.clean_data()
@@ -195,12 +190,13 @@ class BaseApp(object):
 
     @command
     def main(self):
-        "Default command (not yet implemented)"
+        """Default command (not yet implemented)"""
         raise NotImplementedError
+
     # Internal
 
     def _get_annotated_methods(self, annotation):
-        "Returns references to operations/commands/tests that have the corresponding decorator attached"
+        """Returns references to operations/commands/tests that have the corresponding decorator attached"""
 
         for attr_name in dir(self.__class__):
             attr = getattr(self.__class__, attr_name)
@@ -210,7 +206,7 @@ class BaseApp(object):
 
     # Entry Points
     def enter(self):
-        "Run the command given in the CLI"
+        """Run the command given in the CLI"""
         if self.args.command:
             # Retrieve and call the command
             getattr(self, self.args.command)()

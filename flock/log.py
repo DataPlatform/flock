@@ -5,7 +5,6 @@ from .fancyemail import send_email
 
 
 class BufferedSMTPHandler(handlers.SMTPHandler):
-
     def __init__(self, *args, **kwargs):
         self.buffer = list()
         self.flushes = 1
@@ -24,7 +23,7 @@ class BufferedSMTPHandler(handlers.SMTPHandler):
         subject = self.subject + " part{0}: ".format(self.flushes)
 
         message = '\r\n'.join((str(self.format(item)).strip().replace('\n', '<br>\n')
-                              for item in self.buffer))
+                               for item in self.buffer))
         num_errors = message.count('ERROR')
         num_warnings = message.count('WARNING')
 
@@ -51,7 +50,6 @@ class BufferedSMTPHandler(handlers.SMTPHandler):
 
 
 def get_logger(name, log_filename, smtp_args=None, smtp_kwargs=None):
-
     # Default handler logs to a file
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -74,7 +72,7 @@ def get_logger(name, log_filename, smtp_args=None, smtp_kwargs=None):
     # Third handler ships log messages over smtp connection to given
     # distribution list
     if smtp_args:
-        if smtp_kwargs == None:
+        if smtp_kwargs is None:
             smtp_kwargs = dict()
         email_handler = BufferedSMTPHandler(*smtp_args, **smtp_kwargs)
         email_handler.setLevel(logging.INFO)

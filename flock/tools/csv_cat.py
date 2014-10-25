@@ -23,7 +23,7 @@ def csv_cat(infiles, outfile, append_filename=False):
         if append_filename:
             fieldnames.append("_filename")
 
-        if allowed_fields == None:
+        if allowed_fields is None:
             allowed_fields = fieldnames
             writer.writerow(allowed_fields)
 
@@ -34,6 +34,7 @@ def csv_cat(infiles, outfile, append_filename=False):
             data = [row[k] for k in allowed_fields]
             data.append(filename)
             writer.writerow(data)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

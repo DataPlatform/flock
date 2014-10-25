@@ -1,4 +1,4 @@
-"Collection of code for dealing with csv gotchas and common operations"
+"""Collection of code for dealing with csv gotchas and common operations"""
 
 # Originally taken from http://docs.python.org/2/library/csv.html but has
 # been modified
@@ -77,7 +77,7 @@ class FancyReader:
         self.header = None
 
     def fixed_header(self):
-        "This rewrites the header to autonumber duplicated fieldnames"
+        """This rewrites the header to autonumber duplicated fieldnames"""
         if not self.header:
             self.next()
         return fix_header(self.header)
@@ -140,7 +140,7 @@ class UnicodeWriter:
         self.inputencoding = None
 
     def writerow(self, row):
-        "Write a list as a delimited row"
+        """Write a list as a delimited row"""
         self.writer.writerow([s.encode("utf-8") for s in row])
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
@@ -153,12 +153,12 @@ class UnicodeWriter:
         self.queue.truncate(0)
 
     def writerows(self, rows):
-        "Write a list of lists as csv data"
+        """Write a list of lists as csv data"""
         for row in rows:
             self.writerow(row)
 
     def write(self, row):
-        "For writing pre-formatted csv data"
+        """For writing pre-formatted csv data"""
         data = self.encoder.encode(row)
         self.stream.write(data)
 

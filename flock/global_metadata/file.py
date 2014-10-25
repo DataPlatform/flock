@@ -1,10 +1,10 @@
 import json
 import os
-from collections import OrderedDict,defaultdict
+from collections import OrderedDict, defaultdict
 from flock.annotate import operation
 
-class Metadata(object):
 
+class Metadata(object):
     def __init__(self):
         # set up file based metadata
 
@@ -24,6 +24,7 @@ class Metadata(object):
             self.metadata = defaultdict(dict, data)
         else:
             self.metadata = defaultdict(dict)
+
     @operation
     def export_metadata(self):
         """
@@ -45,7 +46,6 @@ class Metadata(object):
     @operation
     def metadata_keys(self):
         return self.metadata.iterkeys()
-
 
 
     # Todo: find a better way of persisting!

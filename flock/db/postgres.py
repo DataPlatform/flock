@@ -27,6 +27,7 @@ def dial(uri):
             db://test_user:test_pw@localhost/test_db
     """
     import urlparse
+
     uri = urlparse.urlparse(uri.strip())
     username = uri.username
     password = uri.password
@@ -64,19 +65,19 @@ def loads(str):
 
 
 def smart_object_load(pairs):
-    "For custom rehydrating of postgres Json data"
+    """For custom rehydrating of postgres Json data"""
     data = OrderedDict()
     for k, v in pairs.iteritems():
         data[k] = cull_date_strings(v)
 
     return data
 
+
 # def loads(str):
-#     return json.loads(str, object_pairs_hook=smart_object_load)
+# return json.loads(str, object_pairs_hook=smart_object_load)
 
 
 class CustomJson(Json):
-
     def dumps(self, obj):
         if isinstance(obj, dt.datetime) or isinstance(obj, dt.date):
             obj = obj.isoformat()
@@ -91,16 +92,15 @@ json.dumps(dt.datetime.now(), default=dthandler)
 
 
 # class DateTimeJSONEncoder(json.JSONEncoder):
-#     def default(self, obj):
-#         if isinstance(obj, dt.datetime):
-#             return obj.isoformat()
-#         else:
-#             return super(DateTimeJSONEncoder, self).default(obj)
+# def default(self, obj):
+# if isinstance(obj, dt.datetime):
+# return obj.isoformat()
+# else:
+# return super(DateTimeJSONEncoder, self).default(obj)
 # dumps =  partial(DateTimeJSONEncoder().encode)
 
 
 class Driver(object):
-
     def __init__(self):
         assert self.settings
         # set up db connection
@@ -159,12 +159,12 @@ class Driver(object):
 
     @operation
     def selectone(self, sql, *args, **kwargs):
-        " Convenience method for queries that return one value"
+        """ Convenience method for queries that return one value"""
         assert sql.strip().lower().startswith('select')
         cursor = self.db.cursor()
         cursor.execute(sql, *args, **kwargs)
         answer = cursor.fetchone()
-        if answer != None:
+        if answer is not None:
             answer = answer[0]
         sql_log_msg = 'Statement is {0} `{1}` (clipped at 200 chars)'.format(
             answer, ' '.join(cursor.query.split())[:200])
@@ -172,7 +172,7 @@ class Driver(object):
         return answer
 
     def _schema_exists(self):
-        "Test if this schema exists in the active database"
+        """Test if this schema exists in the active database"""
         return self.selectone(
             'select (SELECT count(*) FROM information_schema.schemata WHERE schema_name =%(name)s) > 0;',
             dict(name=self.name)
@@ -180,7 +180,7 @@ class Driver(object):
 
     @operation
     def init_app_in_db(self):
-        "Activate database with this schema"
+        """Activate database with this schema"""
         assert self.db
         self.execute('create schema {schema.name};')
         self.execute('grant usage on schema {schema.name} to {users}',
@@ -219,17 +219,15 @@ class Driver(object):
         return data
 
 
-
-
 class Transaction:
-
-    "For managing savepoints inside Postgres transactions"
+    """For managing savepoints inside Postgres transactions"""
 
     def __init__(self, driver):
         self.driver = driver
+
     @operation
     def savepoint(self):
-        "Sets a savepoint"
+        """Sets a savepoint"""
         id = self.driver.uuid('sp')
         self.driver.execute('SAVEPOINT {0};'.format(id))
         self.driver.logger.debug('Setting database savepoint {0}'.format(id))
@@ -237,19 +235,19 @@ class Transaction:
 
     @operation
     def return_to_savepoint(self, id):
-        "Returns to the specified savepoint"
+        """Returns to the specified savepoint"""
         self.driver.logger.warn(
             'Returning to database savepoint {0}'.format(id))
         self.driver.execute('ROLLBACK TO SAVEPOINT {0};'.format(id))
 
-class Pipeline(object):
 
+class Pipeline(object):
     def __init__(self):
         assert self.settings
 
     @operation
     def run_pipeline(self, pipeline):
-        "Runs the specified pipeline"
+        """Runs the specified pipeline"""
         path = os.path.join(self.schema_dir, 'pipelines', pipeline)
         if os.path.isdir(path):
             steps = glob.glob(os.path.join(path, "*"))
@@ -261,8 +259,8 @@ class Pipeline(object):
                 "Running pipeline step {0}: {1}".format(i, step_name))
             self.execute(open(step).read())
 
-class CSVTable(object):
 
+class CSVTable(object):
     def __init__(self, table_name, flock_app):
         """
             For table specific ops
@@ -284,7 +282,7 @@ class CSVTable(object):
             os.makedirs(self.data_root)
 
     def __unicode__(self):
-        "Returning only the name. (useful for string formatting)"
+        """Returning only the name. (useful for string formatting)"""
         return self.full_name
 
     # DDL File interactions
@@ -293,7 +291,7 @@ class CSVTable(object):
         return os.path.exists(self.ddl_filename)
 
     def get_schema_filename(self, function):
-        "Returns a calculated filename where code should be stored for the given function"
+        """Returns a calculated filename where code should be stored for the given function"""
         filename = os.path.join(
             self.flock.schema_dir, function, self.name + '.sql')
         directory = os.path.dirname(filename)
@@ -303,7 +301,7 @@ class CSVTable(object):
 
     @operation
     def get_schema(self, temporary=False):
-        "Returns the stored DDL from a file"
+        """Returns the stored DDL from a file"""
         ddl = open(self.ddl_filename).read()
         if temporary:
             ddl = re.sub("create table", "create temporary table",
@@ -319,7 +317,7 @@ class CSVTable(object):
 
     @operation
     def set_schema(self, ddl, fieldmap=None):
-        "Stores the provided DDL in definitions/{self.name}.sql"
+        """Stores the provided DDL in definitions/{self.name}.sql"""
         open(self.ddl_filename, 'wb').write(ddl)
         self.logger.debug('Wrote ddl to {0}'.format(self.ddl_filename))
         key = self.name + '/csvfieldmap'
@@ -328,7 +326,7 @@ class CSVTable(object):
 
     @operation
     def get_schema_constraints(self):
-        "Looks for any table constraints in constraints/{self.name}.sql"
+        """Looks for any table constraints in constraints/{self.name}.sql"""
         filename = self.get_schema_filename('constraint')
         if os.path.exists(filename):
             sql = open(filename).read()
@@ -369,7 +367,7 @@ class CSVTable(object):
             raise FlockNoData('Table appears to have no slice data ' + str(e))
 
     def _get_mapper(self, md_key):
-        "Returns a function that maps unstandardized fieldnames to standardized ones"
+        """Returns a function that maps unstandardized fieldnames to standardized ones"""
 
         print 'Attempting to find metadata for key:', md_key
         if md_key in self.flock.metadata:
@@ -379,7 +377,7 @@ class CSVTable(object):
             mapper = lambda x: fieldmap[x]
             # self.logger.debug("*Using the following field mappings*")
             # for k,v in fieldmap.iteritems():
-            #     self.logger.debug('{0}: {1}'.format(k,v))
+            # self.logger.debug('{0}: {1}'.format(k,v))
         else:
             mapper = lambda x: x
         return mapper
@@ -395,7 +393,7 @@ class CSVTable(object):
     # completely undefined by default.
 
     def write_data_to_csv(self, slice, slice_name=None):
-        "Takes a 2d array (with headers) and dumps it to a csv file"
+        """Takes a 2d array (with headers) and dumps it to a csv file"""
         if not slice_name:
             slice_name = self.flock.uuid('slice')
         filename = self.get_csv_filename(slice_name)
@@ -421,14 +419,18 @@ class CSVTable(object):
         return filename, slice_name
 
     def read_data_from_csv(self, slice_name):
-        "Reads data from a named csv file"
+        """Reads data from a named csv file"""
         filename = os.path.join(self.data_root, 'slice', slice_name)
         reader = FancyReader(open(filename, 'rb'), encoding='utf-8')
         return list(reader)
 
     @operation
     def load_data(self, transaction):
-        "Makes sure all slices are loaded. Does not attempt to load a slice if it has been loaded before and there is a record"
+        """
+         Makes sure all slices are loaded. Does not attempt to
+         load a slice if it has been loaded before and there is a record
+        """
+
         inserted_slices = self.query_metadata('inserted_slice')
         filenames = self.get_csv_filenames()
         new_slices = [
@@ -441,14 +443,14 @@ class CSVTable(object):
         return report
 
     def get_csv_filenames(self):
-        "Globs a list of availible files for the given function."
+        """Globs a list of availible files for the given function."""
         data = dict(self=self, function='slice')
         p = "{self.data_root}/{function}/*".format(**data)
         filenames = sorted(glob.glob(p))
         return filenames
 
     def get_csv_names(self):
-        "Returns a list of slice names based on filesystem contents."
+        """Returns a list of slice names based on filesystem contents."""
         return [os.path.basename(filename) for filename in self.get_csv_filenames()]
 
     def get_csv_filename(self, slice_name):
@@ -505,9 +507,9 @@ class CSVTable(object):
         return self.flock.selectone("""SELECT (SELECT count(*) FROM information_schema.tables 
             where table_name = %(table_name)s
             and table_schema = %(schema_name)s) > 0""",
-                                     dict(table_name=self.database_table_name,
-                                          schema_name=self.flock.name)
-                                     )
+                                    dict(table_name=self.database_table_name,
+                                         schema_name=self.flock.name)
+        )
 
     def number_of_rows_in_db(self):
         if self.table_exists():
