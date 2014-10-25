@@ -4,7 +4,7 @@ sys.path.append('../')
 from flock.app import BaseApp
 from flock.schema import Schema
 from flock.global_metadata.file import Metadata
-from flock.db.postgres import Pipeline, TableManager
+from flock.db.postgres import Pipeline, CSVTable
 from flock.db.postgres import Driver as PGDriver
 from flock.annotate import flock,command, operation
 from flock.exceptions import *

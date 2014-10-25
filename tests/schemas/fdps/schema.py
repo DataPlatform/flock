@@ -8,7 +8,7 @@ import shutil
 import json
 from flock.app import BaseApp
 from flock.annotate import command, operation, test, flock
-from flock.db.postgres import Pipeline, Driver, TableManager
+from flock.db.postgres import Pipeline, Driver, CSVTable
 from flock.global_metadata.file import Metadata
 from datetime import datetime, date, timedelta
 from psycopg2 import IntegrityError, ProgrammingError, DataError
@@ -27,7 +27,7 @@ class App(BaseApp, Pipeline, Driver, Metadata):
     # Required (Importing here leaves a reference to the module as an
     # attribute)
     settings = settings
-    InjectedTableClass = TableManager
+    InjectedTableClass = CSVTable
 
     @operation
     def download_new_data(self, procurements):
@@ -48,7 +48,7 @@ class App(BaseApp, Pipeline, Driver, Metadata):
             days = (yesterday - beginning).days
             slice = get_fdps_slice(beginning, days)
             slice_name = beginning.isoformat()
-            slice_name = procurements.write_slice_to_file(
+            slice_name = procurements.write_data_to_csv(
                 slice, slice_name=slice_name)
 
             procurements.set_metadata('api_download_upper_bound', yesterday)
@@ -68,28 +68,28 @@ class App(BaseApp, Pipeline, Driver, Metadata):
         self.download_new_data(procurements)
 
         # Generate a create table statement based on sample data
-        infiles = (open(f, 'rb') for f in procurements.get_slice_filenames())
+        infiles = (open(f, 'rb') for f in procurements.get_csv_filenames())
         ddl, fieldmap = csv_to_ddl(infiles, procurements.full_name)
-        procurements.set_ddl(ddl, fieldmap=fieldmap)
+        procurements.set_schema(ddl, fieldmap=fieldmap)
 
         with self.transaction() as transaction:
 
             # Execute the create table statement
-            procurements.apply_ddl()
+            procurements.sync_schema()
 
             # Load initial data as well
             procurements.hot_insert_file_data(
-                procurements.get_slice_filenames(), transaction)
+                procurements.get_csv_filenames(), transaction)
 
     @command
     def update(self, max_days=None):
         "Update the data in the database"
 
         procurements = self.tables['procurements']
-        seen_slices = procurements.get_slice_filenames()
+        seen_slices = procurements.get_csv_filenames()
         self.download_new_data(procurements)
         new_slices = [
-            s for s in procurements.get_slice_filenames() if s not in seen_slices]
+            s for s in procurements.get_csv_filenames() if s not in seen_slices]
 
         self.logger.info('Found the following slices' + str(new_slices))
 

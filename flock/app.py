@@ -186,7 +186,7 @@ class BaseApp(object):
         "Delete all data in the database and on the filesystem"
         self.clean_database()
         for table in self.tables.itervalues():
-            table.clean_slice_data()
+            table.clean_data()
 
     @command
     def test(self):

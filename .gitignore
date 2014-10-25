@@ -29,6 +29,8 @@ pip-log.txt
 
 # Custom
 .py
+.idea
+doc
 
 
 # Flock

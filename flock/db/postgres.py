@@ -14,7 +14,7 @@ from ..annotate import operation
 from ..tools.csv_import import csv_import
 from ..annotate import operation
 from ..fancycsv import FancyReader, UnicodeWriter
-from ..error import *
+from ..exceptions import *
 from ..tools.csv_to_ddl import csv_to_ddl
 
 db_parser = argparse.ArgumentParser(add_help=False)
@@ -115,7 +115,7 @@ class Driver(object):
 
         if self.db and not self._schema_exists():
             with self.transaction() as transaction:
-                self._init_schema_with_db()
+                self.init_app_in_db()
 
 
     @contextlib.contextmanager
@@ -144,6 +144,7 @@ class Driver(object):
 
     # Database helpers
 
+    @operation
     def execute(self, sql, *args, **kwargs):
         """
             Does some string formatting before calling cursor.execute. 
@@ -156,6 +157,7 @@ class Driver(object):
         cursor.execute(sql, *args)
         return cursor
 
+    @operation
     def selectone(self, sql, *args, **kwargs):
         " Convenience method for queries that return one value"
         assert sql.strip().lower().startswith('select')
@@ -176,7 +178,8 @@ class Driver(object):
             dict(name=self.name)
         )
 
-    def _init_schema_with_db(self):
+    @operation
+    def init_app_in_db(self):
         "Activate database with this schema"
         assert self.db
         self.execute('create schema {schema.name};')
@@ -196,24 +199,53 @@ class Driver(object):
     # the database is swapped out.)
 
     @operation
-    def set_database_journal(self, key, function, data):
+    def journal_data(self, key, function, data):
         sql_template = "insert into {0}.flock (key,function,data) VALUES (%s,%s,%s)".format(
             self.name)
         self.execute(sql_template, [key, function, CustomJson(data)])
 
     @operation
-    def get_database_journal(self, key, function):
+    def get_journal_data(self, key, function):
         sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(
             self.name)
         return self.selectone(sql_template, [key, function])
 
     @operation
-    def query_database_journal(self, key, function):
+    def query_journal_data(self, key, function):
         sql_template = "select data from {0}.flock where key = %s and function = %s order by id desc".format(
             self.name)
         c = self.execute(sql_template, [key, function])
         data = [row[0] for row in c.fetchall()]
         return data
+
+
+
+
+class Transaction:
+
+    "For managing savepoints inside Postgres transactions"
+
+    def __init__(self, driver):
+        self.driver = driver
+    @operation
+    def savepoint(self):
+        "Sets a savepoint"
+        id = self.driver.uuid('sp')
+        self.driver.execute('SAVEPOINT {0};'.format(id))
+        self.driver.logger.debug('Setting database savepoint {0}'.format(id))
+        return id
+
+    @operation
+    def return_to_savepoint(self, id):
+        "Returns to the specified savepoint"
+        self.driver.logger.warn(
+            'Returning to database savepoint {0}'.format(id))
+        self.driver.execute('ROLLBACK TO SAVEPOINT {0};'.format(id))
+
+class Pipeline(object):
+
+    def __init__(self):
+        assert self.settings
 
     @operation
     def run_pipeline(self, pipeline):
@@ -229,35 +261,7 @@ class Driver(object):
                 "Running pipeline step {0}: {1}".format(i, step_name))
             self.execute(open(step).read())
 
-
-class Transaction:
-
-    "For managing savepoints inside Postgres transactions"
-
-    def __init__(self, driver):
-        self.driver = driver
-
-    def savepoint(self):
-        "Sets a savepoint"
-        id = self.driver.uuid('sp')
-        self.driver.execute('SAVEPOINT {0};'.format(id))
-        self.driver.logger.debug('Setting database savepoint {0}'.format(id))
-        return id
-
-    def return_to_savepoint(self, id):
-        "Returns to the specified savepoint"
-        self.driver.logger.warn(
-            'Returning to database savepoint {0}'.format(id))
-        self.driver.execute('ROLLBACK TO SAVEPOINT {0};'.format(id))
-
-class Pipeline(object):
-
-    def __init__(self):
-        assert self.settings
-
-
-
-class TableManager(object):
+class CSVTable(object):
 
     def __init__(self, table_name, flock_app):
         """
@@ -284,7 +288,8 @@ class TableManager(object):
         return self.full_name
 
     # DDL File interactions
-    def ddl_exists(self):
+    @operation
+    def has_schema(self):
         return os.path.exists(self.ddl_filename)
 
     def get_schema_filename(self, function):
@@ -297,7 +302,7 @@ class TableManager(object):
         return filename
 
     @operation
-    def get_ddl(self, temporary=False):
+    def get_schema(self, temporary=False):
         "Returns the stored DDL from a file"
         ddl = open(self.ddl_filename).read()
         if temporary:
@@ -309,11 +314,11 @@ class TableManager(object):
         else:
             # only applying constraints to the actual table and not staging
             # tables
-            ddl += self.get_constraints()
+            ddl += self.get_schema_constraints()
             return ddl
 
     @operation
-    def set_ddl(self, ddl, fieldmap=None):
+    def set_schema(self, ddl, fieldmap=None):
         "Stores the provided DDL in definitions/{self.name}.sql"
         open(self.ddl_filename, 'wb').write(ddl)
         self.logger.debug('Wrote ddl to {0}'.format(self.ddl_filename))
@@ -322,7 +327,7 @@ class TableManager(object):
         self.logger.debug('Updated metadata at key {0}'.format(key))
 
     @operation
-    def get_constraints(self):
+    def get_schema_constraints(self):
         "Looks for any table constraints in constraints/{self.name}.sql"
         filename = self.get_schema_filename('constraint')
         if os.path.exists(filename):
@@ -332,16 +337,15 @@ class TableManager(object):
         return sql
 
     @operation
-    def apply_ddl(self):
+    def sync_schema(self):
         self.flock.logger.debug("Applying ddl from file to database")
-        sql = self.get_ddl()
+        sql = self.get_schema()
         if self.table_exists():
             self.flock.logger.warn("Deleting existing database table")
             self.clean_database()
         self.flock.execute(sql)
 
-    @operation
-    def clean_ddl(self):
+    def clean_schema(self):
         """
             Delete ddl statemnents from the definitions directory
         """
@@ -349,23 +353,40 @@ class TableManager(object):
             os.remove(table.ddl_filename)
 
     @operation
-    def generate_ddl_from_slice_data(self):
+    def generate_schema(self):
         """
             Generate DDL statements based on the shape of the slice data
         """
-        slices = self.get_slice_filenames()
+        slices = self.get_csv_filenames()
         if not slices:
             raise FlockNoData("Refusing to build ddl with empty slices")
         try:
             infiles = (open(f, 'rb') for f in slices)
             ddl, fieldmap = csv_to_ddl(
                 infiles, self.full_name, logger=self.logger, encoding='utf-8')
-            self.set_ddl(ddl, fieldmap=fieldmap)
+            self.set_schema(ddl, fieldmap=fieldmap)
         except StopIteration as e:
             raise FlockNoData('Table appears to have no slice data ' + str(e))
 
+    def _get_mapper(self, md_key):
+        "Returns a function that maps unstandardized fieldnames to standardized ones"
+
+        print 'Attempting to find metadata for key:', md_key
+        if md_key in self.flock.metadata:
+            # A mapping is configured for this key
+            fieldmap = self.flock.metadata[md_key]
+            assert type(fieldmap) == OrderedDict
+            mapper = lambda x: fieldmap[x]
+            # self.logger.debug("*Using the following field mappings*")
+            # for k,v in fieldmap.iteritems():
+            #     self.logger.debug('{0}: {1}'.format(k,v))
+        else:
+            mapper = lambda x: x
+        return mapper
+
+
     def mapper(self):
-        return self.flock.get_mapper('{0}/csvfieldmap'.format(self.name))
+        return self._get_mapper('{0}/csvfieldmap'.format(self.name))
 
     # Data file interactions
 
@@ -373,12 +394,11 @@ class TableManager(object):
     # The order and manner in which they are applied to the database is
     # completely undefined by default.
 
-    @operation
-    def write_slice_to_file(self, slice, slice_name=None):
+    def write_data_to_csv(self, slice, slice_name=None):
         "Takes a 2d array (with headers) and dumps it to a csv file"
         if not slice_name:
             slice_name = self.flock.uuid('slice')
-        filename = self.get_slice_filename(slice_name)
+        filename = self.get_csv_filename(slice_name)
 
         if os.path.exists(filename):
             self.logger.debug("Overwriting slice file at {0}".format(filename))
@@ -400,18 +420,17 @@ class TableManager(object):
 
         return filename, slice_name
 
-    @operation
-    def read_slice_from_file(self, slice_name):
+    def read_data_from_csv(self, slice_name):
         "Reads data from a named csv file"
         filename = os.path.join(self.data_root, 'slice', slice_name)
         reader = FancyReader(open(filename, 'rb'), encoding='utf-8')
         return list(reader)
 
     @operation
-    def apply_slices_to_database(self, transaction):
+    def load_data(self, transaction):
         "Makes sure all slices are loaded. Does not attempt to load a slice if it has been loaded before and there is a record"
         inserted_slices = self.query_metadata('inserted_slice')
-        filenames = self.get_slice_filenames()
+        filenames = self.get_csv_filenames()
         new_slices = [
             f for f in filenames if os.path.basename(f) not in inserted_slices]
         for n in new_slices:
@@ -421,18 +440,18 @@ class TableManager(object):
             self.set_metadata('inserted_slice', os.path.basename(f))
         return report
 
-    def get_slice_filenames(self):
+    def get_csv_filenames(self):
         "Globs a list of availible files for the given function."
         data = dict(self=self, function='slice')
         p = "{self.data_root}/{function}/*".format(**data)
         filenames = sorted(glob.glob(p))
         return filenames
 
-    def get_slice_names(self):
+    def get_csv_names(self):
         "Returns a list of slice names based on filesystem contents."
-        return [os.path.basename(filename) for filename in self.get_slice_filenames()]
+        return [os.path.basename(filename) for filename in self.get_csv_filenames()]
 
-    def get_slice_filename(self, slice_name):
+    def get_csv_filename(self, slice_name):
         filename = os.path.join(self.data_root, 'slice', slice_name)
         directory = os.path.dirname(filename)
         if not os.path.exists(directory):
@@ -440,8 +459,8 @@ class TableManager(object):
         return filename
 
     @operation
-    def clean_slice_data(self):
-        for filename in self.get_slice_filenames():
+    def clean_data(self):
+        for filename in self.get_csv_filenames():
             self.logger.debug("Cleaning {0}".format(filename))
             os.remove(filename)
 
@@ -470,14 +489,17 @@ class TableManager(object):
 
         return [row[0] for row in cursor.fetchall()]
 
+    @operation
     def get_metadata(self, function):
-        return self.flock.get_database_journal(self.name, function)
+        return self.flock.get_journal_data(self.name, function)
 
+    @operation
     def query_metadata(self, function):
-        return self.flock.query_database_journal(self.name, function)
+        return self.flock.query_journal_data(self.name, function)
 
+    @operation
     def set_metadata(self, function, data):
-        return self.flock.set_database_journal(self.name, function, data)
+        return self.flock.journal_data(self.name, function, data)
 
     def table_exists(self):
         return self.flock.selectone("""SELECT (SELECT count(*) FROM information_schema.tables 
@@ -510,7 +532,7 @@ class TableManager(object):
             self.clean_database(deep=True)
         self.flock.execute('delete from {0}.flock where key = \'{1}\';'.format(
             self.flock.name, self.name))
-        self.clean_slice_data()
+        self.clean_data()
 
     @operation
     def grant(self):
@@ -521,7 +543,6 @@ class TableManager(object):
                 full_name=self.full_name
             ))
 
-    @operation
     def hot_insert_file_data(self, infiles, transaction, encoding='utf-8'):
         """
             Take data from staging csv's and insert them to the database
@@ -545,7 +566,7 @@ class TableManager(object):
             )
             for infile in infiles:
 
-                temp_table_ddl, temp_tablename = self.get_ddl(temporary=True)
+                temp_table_ddl, temp_tablename = self.get_schema(temporary=True)
 
                 args = infile, temp_tablename
                 self.logger.debug(

@@ -6,3 +6,6 @@ chardet
 requests
 readline
 nose
+pyzmq
+jijnja2
+tornado
